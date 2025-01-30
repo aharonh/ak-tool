@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+.venv/
+*.pyc[index]
+*.pyo
+
+# Editors/IDEs
+.vscode/
+.idea/
+
+chatgpt/
+deepseek/
+
+prompt.txt
+initial-response*
+
+dist/
