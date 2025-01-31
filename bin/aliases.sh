@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # short alias for kubectl
 complete -F __start_kubectl k
 

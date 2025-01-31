@@ -1,127 +1,146 @@
-# The **ak** (access kubernetes) tool
+# ak (Access Kubernetes)
 
-This project consolidates AWS MFA login, Kubernetes context switching, and Kubernetes API token refreshing into a single CLI tool (`ak`). It is useful for engineers who work with multiple Kubernetes clusters in multiple AWS accounts, each configured with OpenID Connect SSO or other secure authentication methods (including MFA).
+**ak** is a unified CLI tool that simplifies AWS MFA logins, Kubernetes context switching, and Kubernetes API token refreshing. Designed for engineers managing multiple Kubernetes clusters across different AWS accounts, **ak** streamlines daily authentication and environment management—especially when using OpenID Connect SSO, MFA, or other secure authentication methods.
 
 ---
 
-Table of Contents
-- [The **ak** (access kubernetes) tool](#the-ak-access-kubernetes-tool)
+## Table of Contents
+
+- [ak (Access Kubernetes)](#ak-access-kubernetes)
+  - [Table of Contents](#table-of-contents)
   - [Quick Start](#quick-start)
+    - [1. Install Dependencies](#1-install-dependencies)
+    - [2. Source the Completion Script](#2-source-the-completion-script)
+    - [3. Run `ak` Commands](#3-run-ak-commands)
+    - [4. Prompt \& Environment Variables](#4-prompt--environment-variables)
   - [Introduction](#introduction)
   - [Features](#features)
     - [Streamlined AWS MFA Authentication](#streamlined-aws-mfa-authentication)
-      - [**How It Works**](#how-it-works)
-      - [**Configuration Breakdown**](#configuration-breakdown)
-      - [**AWS CLI Configuration**](#aws-cli-configuration)
-      - [**How `ak` Updates Credentials**](#how-ak-updates-credentials)
+      - [How It Works](#how-it-works)
+      - [Configuration Breakdown](#configuration-breakdown)
+      - [AWS CLI Configuration](#aws-cli-configuration)
+      - [How `ak` Updates Credentials](#how-ak-updates-credentials)
     - [Streamlined Kubernetes API Authentication](#streamlined-kubernetes-api-authentication)
+      - [How It Works](#how-it-works-1)
+      - [Configuration Breakdown](#configuration-breakdown-1)
+      - [AWS CLI Configuration](#aws-cli-configuration-1)
+      - [The kubeconfig File](#the-kubeconfig-file)
     - [Multiple Kubeconfigs \& Namespaces](#multiple-kubeconfigs--namespaces)
     - [Automatic or On-Demand Token Refresh](#automatic-or-on-demand-token-refresh)
     - [Kubernetes \& AWS Profile Synchronization](#kubernetes--aws-profile-synchronization)
     - [Completion](#completion)
-  - [Command line parameters](#command-line-parameters)
+  - [Command Line Parameters](#command-line-parameters)
   - [Configuration](#configuration)
   - [Testing](#testing)
+    - [Run Tests with Pytest Directly](#run-tests-with-pytest-directly)
+    - [Using Make](#using-make)
+    - [Coverage Reports](#coverage-reports)
+  - [Final Notes](#final-notes)
+
+---
 
 ## Quick Start
 
-1. **Install Dependencies**
+### 1. Install Dependencies
 
-   **Using a virtual environment:**
-   ```bash
-   cd ak
-   python3 -m venv .venv
-   source .venv/bin/activate
-   make install
-   ```
+**Using a virtual environment:**
 
-   **Local installation:**
-   ```bash
-   cd ak
-   make install
-   ```
+```bash
+cd ak
+python3 -m venv .venv
+source .venv/bin/activate
+make install
+```
 
-2. **Source the completion script**
+**Local Installation:**
 
-   ```bash
-   eval "$(ak completion bash)"
-   ```
+```bash
+cd ak
+make install
+```
 
-3. **Run `ak` Commands**
-   ```bash
-   # AWS login with MFA code:
-   ak l 123456
+### 2. Source the Completion Script
 
-   # Switch to a particular kubeconfig:
-   ak c dev
+```bash
+eval "$(ak completion bash)"
+```
 
-   # Switch to a named context:
-   ak x kube-system
-   ```
+### 3. Run `ak` Commands
 
-4. **Prompt & Environment Variables**
+- **AWS Login with MFA Code:**
 
-   - After running `ak c <kubeconfig>` or `ak x <context>`, the shell prompt (`PS1`) is updated to reflect the active context.
-   - The `AWS_PROFILE` environment variable is also updated to match the AWS account linked to the new context.
+  ```bash
+  ak l 123456
+  ```
 
+- **Switch to a Particular Kubeconfig:**
+
+  ```bash
+  ak c dev
+  ```
+
+- **Switch to a Named Context:**
+
+  ```bash
+  ak x kube-system
+  ```
+
+### 4. Prompt & Environment Variables
+
+- After running `ak c <kubeconfig>` or `ak x <context>`, your shell prompt (`PS1`) updates to reflect the active context.
+- The `AWS_PROFILE` environment variable is automatically set to match the AWS account linked to the new context.
+- The `KUBECONFIG` environment variable is updated to point to the correct kubeconfig file.
 
 ---
 
 ## Introduction
 
-`ak` reduces the commands and complexity involved in authenticating to multiple AWS accounts and navigating multiple Kubernetes clusters. It handles AWS MFA tokens, short-lived Kubernetes API tokens, and automatically refreshes them when needed.
+Managing multiple AWS accounts and Kubernetes clusters can be complex. **ak** minimizes that complexity by:
+
+- Handling AWS MFA tokens and short-lived Kubernetes API tokens.
+- Automating token refreshes.
+- Providing a single interface for switching contexts across environments.
 
 ---
 
 ## Features
 
-- **Streamlined AWS MFA Authentication**
-  - Handles MFA-based logins for AWS and short-lived Kubernetes tokens.  
-  - Reduces the steps needed for daily re-authentication.
-
-- **Streamlined Kubernetes API Authentication**  
-  - Prevents repetitive token generation for kOps-based clusters.  
-  - EKS users can still benefit from centralized config management.
-
-- **Multiple Kubeconfig Management**  
-  - Easily switch among dev, test, and production clusters.
-
-- **Multiple Namespace Context Switching**  
-  - Quickly change between different namespace contexts.  
-  - Automatically refreshes Kubernetes tokens when needed.
-
-- **Automatic or On-Demand Token Refresh**  
-  - Renews Kubernetes API tokens when they expire, as long as the AWS session token remains valid.
-
-- **Kubernetes & AWS Profile Synchronization**  
-  - Each kubeconfig context is tied to the appropriate AWS account.  
-  - Switching contexts updates `AWS_PROFILE`, so your AWS CLI usage remains consistent with the current cluster.
-
-- **User friendly**
-  - The commands are short, documented and they autocomplete
-  - Updated prompt with current git branch, kubeconfig and kubernetes context
-
-
-
----
-
 ### Streamlined AWS MFA Authentication
 
-In secure AWS/Kubernetes environments, **SSO and MFA** are commonly required, often with short-lived credentials. An AWS **STS session token** typically expires in **12 hours**, while a **Kubernetes API token** may last only **15 minutes**. The **ak** tool simplifies re-authentication by managing AWS MFA and Kubernetes configuration in a **single** place.
+**ak** simplifies the process of AWS MFA authentication and token management. In secure environments where MFA and SSO are required, **ak** reduces the daily authentication steps to a single command.
 
-With **ak**, daily authentication is reduced to a **single command**:
+#### How It Works
+
+- **Dual-Profile Model:**  
+  - **Original Profile:** Used for initial MFA authentication with AWS.
+  - **Authenticated Profile:** Stores temporary credentials after MFA validation.
+
+Running:
 
 ```bash
 ak l 123456
 ```
 
-#### **How It Works**
-The authentication process follows a **dual-profile model**:
+performs the following steps:
 
-- **Original Profile** → Used for MFA authentication with AWS.
-- **Authenticated Profile** → Stores the temporary credentials post-MFA.
+1. Authenticates using the **original profile**.
+2. Retrieves a temporary AWS STS session token.
+3. Writes new credentials under the **authenticated profile** in your AWS credentials file.
+4. Switches AWS authentication to the **authenticated profile**.
 
-This allows **ak** to fetch a fresh session token and store it under the **authenticated profile**. You can configure **multiple AWS accounts**, each with its own authentication setup. Below is an example of the **ak** configuration file:
+#### Configuration Breakdown
+
+Key configuration options:
+
+- `credentials_file`: Path to your AWS credentials file.
+- `token_validity_seconds`: Duration (in seconds) for temporary credentials (e.g., 43200 seconds).
+- `default_profile`: Default AWS profile when `--aws-profile` is not specified.
+- Per-account settings (`[aws.<profile_name>]`):
+  - `original_profile`: AWS profile for initial MFA.
+  - `authenticated_profile`: AWS profile to store temporary credentials.
+  - `mfa_serial`: ARN of the MFA device.
+
+Example configuration:
 
 ```ini
 [aws]
@@ -140,17 +159,9 @@ authenticated_profile = home-systems-mfa
 mfa_serial = arn:aws:iam::262626262626:mfa/yubikey4
 ```
 
-#### **Configuration Breakdown**
-- **credentials_file** → Path to the AWS credentials file.
-- **token_validity_seconds** → Duration (in seconds) for which the temporary credentials remain valid.
-- **default_profile** → The default AWS profile used when `--aws-profile` is not specified.
-- **aws.<profile_name>** → Defines different authentication setups per AWS account.
-- **original_profile** → AWS profile used for initial MFA authentication.
-- **authenticated_profile** → AWS profile where temporary credentials are stored.
-- **mfa_serial** → ARN of the MFA device used for authentication.
+#### AWS CLI Configuration
 
-#### **AWS CLI Configuration**
-For **ak** to work correctly, your AWS **config** and **credentials** files must be properly set up. Below is an example AWS **config file**:
+Ensure your AWS CLI is correctly configured. Example for the AWS config file:
 
 ```ini
 [profile company-root]
@@ -162,7 +173,7 @@ region = us-east-1
 output = json
 ```
 
-And a corresponding **AWS credentials file**:
+And the corresponding AWS credentials file:
 
 ```ini
 [company-root]
@@ -175,49 +186,139 @@ aws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 aws_session_token = FQoGZXIvYXdzEJr//////////wEaDIN
 ```
 
-#### **How `ak` Updates Credentials**
+#### How `ak` Updates Credentials
+
 When you run:
 
 ```bash
 ak l 123456
 ```
 
-The **ak** tool:
-1. Uses the **original profile** to authenticate with AWS and perform **MFA validation**.
-2. Retrieves a temporary **STS session token**.
-3. Writes the new credentials under the **authenticated profile** in `~/.aws/credentials`.
-4. Automatically switches AWS authentication to the **authenticated profile**.
+**ak**:
 
-The `[company-root-mfa]` section in the credentials file is dynamically updated by **ak**, ensuring you always have valid credentials.
+1. Uses the **original profile** for MFA validation.
+2. Retrieves and stores a temporary STS session token under the **authenticated profile**.
+3. Updates the credentials in your `~/.aws/credentials` file, ensuring you always have valid credentials.
 
 ---
 
 ### Streamlined Kubernetes API Authentication
 
-- **Kops-based clusters** often lack built-in token caching, causing every `kubectl` command to generate a new token. This can **slow down workflows significantly**.  
-- **ak** caches these tokens to improve performance.  
-- **EKS-based clusters** generally have some caching by default, but can still benefit from ak for multi-cluster config management.
+Managing Kubernetes API tokens—especially for kOps-based clusters—can be cumbersome. **ak** caches and refreshes these tokens to speed up your workflow.
+
+#### How It Works
+
+- **Token Caching:**  
+  **ak** caches the Kubernetes API token in a temporary file.
+- **Automatic Refresh:**  
+  The token is refreshed automatically upon expiration.
+- **Improved Performance:**  
+  This avoids the overhead of generating a new token with each `kubectl` command.
+
+#### Configuration Breakdown
+
+Configuration options for Kubernetes:
+
+- `configs_dir`: Directory containing your kubeconfig files.
+- `temp_dir`: Directory for storing temporary Kubernetes tokens.
+- `token_validity_seconds`: Duration (in seconds) for which the Kubernetes token is valid.
+- `default_config`: Default kubeconfig used with the `ak l` command.
+
+Example configuration:
+
+```ini
+[kube]
+configs_dir = /home/user/.kubeconfigs
+temp_dir = /home/user/.kubeconfigs_temp
+token_validity_seconds = 900
+default_config = dev
+```
+
+#### AWS CLI Configuration
+
+When working with multiple clusters across AWS accounts, you may need additional AWS profiles. For example:
+
+```ini
+[profile company-dev-access]
+region = us-east-1
+output = json
+role_arn = arn:aws:iam::11111111111111:role/admin
+source_profile = company-root-mfa
+role_session_name = your.username
+
+[profile company-prod-access]
+region = eu-central-1
+output = json
+role_arn = arn:aws:iam::22222222222222:role/admin
+source_profile = company-root-mfa
+role_session_name = your.username
+```
+
+**ak** automatically sets the correct `AWS_PROFILE` based on the kubeconfig context.
+
+#### The kubeconfig File
+
+**ak** scans your kubeconfig file for users with an `exec` section using `aws-iam-authenticator`. It generates a temporary kubeconfig file that replaces the `aws-iam-authenticator` command entries with a cached token.
+
+Example kubeconfig entry (before):
+
+```yaml
+users:
+- name: aws-user-dev
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      args:
+      - token
+      - -i
+      - dev.company.com
+      command: /home/user/bin/aws-iam-authenticator
+      env:
+      - name: AWS_PROFILE
+        value: company-dev-access
+      interactiveMode: IfAvailable
+      provideClusterInfo: false
+```
+
+The entry is replaced with:
+
+```yaml
+- name: aws-user-dev
+  user:
+    token: k8s-aws-v1.aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8_QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS
+    # additional fields...
+```
 
 ---
 
 ### Multiple Kubeconfigs & Namespaces
 
-- Switch quickly among dev, test, and prod configs:
+- **Switch Kubeconfigs:**  
+  Easily switch between different clusters (e.g., dev, test, prod):
+
   ```bash
   ak c prod
   ```
-- Switch among multiple namespace contexts within a single cluster:
+
+- **Switch Namespaces:**  
+  Change between namespace contexts within a single cluster:
+
   ```bash
   ak x kube-system
   ```
-- The active context is shown in your shell prompt, e.g. `(dev-kube-system) $ `.
+
+- **Visual Feedback:**  
+  The active context is displayed in your shell prompt (e.g., `(dev-kube-system) $`).
 
 ---
 
 ### Automatic or On-Demand Token Refresh
 
-- When the Kubernetes API token expires but the AWS session token is still valid, **ak** automatically regenerates the Kubernetes token.  
-- You can also force a refresh manually with:
+- **Automatic Refresh:**  
+  When the Kubernetes API token expires but the AWS session token remains valid, **ak** automatically refreshes the token.
+- **Manual Refresh:**  
+  Force a token refresh with:
+
   ```bash
   ak r
   ```
@@ -226,29 +327,44 @@ The `[company-root-mfa]` section in the credentials file is dynamically updated 
 
 ### Kubernetes & AWS Profile Synchronization
 
-- For each kubeconfig context that specifies AWS profile in the user's command, when you run `ak x <context>`, **ak** exports `AWS_PROFILE` so your other AWS CLI commands use the matching account.  
+Each kubeconfig context is associated with an AWS profile. When you switch contexts using:
+
+```bash
+ak x <context>
+```
+
+**ak** exports the appropriate `AWS_PROFILE` so that all your AWS CLI commands use the correct account credentials.
+
+---
 
 ### Completion
 
- - ak supports tab-completion for bash, zsh and fish shell. to enable it run:
+**ak** supports tab-completion for Bash, Zsh, and Fish. To enable completion for Bash, run:
 
-   ```bash
-   eval "$(ak completion bash)"
-   ```
+```bash
+eval "$(ak completion bash)"
+```
 
-   to have the completion always enables fpr bash:
+For persistent Bash completion, install the completion script:
 
-   ```bash
-   ak completion bash | sudo tee /etc/etc/bash_completion.d/ak
-   . /etc/etc/bash_completion.d/ak
-   ```
+```bash
+ak completion bash | sudo tee /etc/bash_completion.d/ak
+. /etc/bash_completion.d/ak
+```
 
-## Command line parameters
+---
 
-Below is the documentation for the commands that **ak** supports:
+## Command Line Parameters
+
+Display the help text with:
 
 ```bash
 ak --help
+```
+
+Example output:
+
+```bash
 Usage: ak [OPTIONS] COMMAND [ARGS]...
 
 Options:
@@ -268,12 +384,11 @@ Commands:
 
 ## Configuration
 
-The configuration file location is `~/.config/ak/config.ini`.
+**ak** uses a configuration file located at `~/.config/ak/config.ini`.
 
-Below is sample configuration file for **ak**:
+Example configuration:
 
 ```ini
-
 [aws]
 credentials_file = /home/user/.aws/credentials
 token_validity_seconds = 43200
@@ -308,27 +423,38 @@ mfa_serial = arn:aws:iam::239087474744:mfa/yubikey4
 configs_dir = /home/user/.kubeconfigs
 temp_dir = /home/user/.kubeconfigs_temp
 token_validity_seconds = 900
-
 ```
 
 ---
 
 ## Testing
 
-1. **Run Pytest Directly**  
-   ```bash
-   pytest tests/ --verbose
-   ```
+### Run Tests with Pytest Directly
 
-2. **Using Make**  
-   ```bash
-   make test
-   ```
+```bash
+pytest tests/ --verbose
+```
 
-3. **Coverage**  
-   ```bash
-   make coverage
-   ```
-   Generates coverage reports with `pytest --cov`.
+### Using Make
+
+```bash
+make test
+```
+
+### Coverage Reports
+
+Generate coverage reports using:
+
+```bash
+make coverage
+```
+
+This command runs `pytest --cov` to generate a detailed coverage report.
 
 ---
+
+## Final Notes
+
+**ak** is designed to reduce operational overhead by consolidating AWS and Kubernetes authentication tasks. Whether you’re switching contexts, refreshing tokens, or managing multiple environments, **ak** provides a streamlined and efficient workflow.
+
+Happy coding!
