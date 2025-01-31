@@ -1,0 +1,8 @@
+- test implementation
+- fix AWS_PROFILE not exported when switching context
+- shorten prompt - instead of <home-dev> {kube-system} use <home-dev/kube-system>
+- complete the documentation - from the streamline aws authentication header 
+- add "ak t" subcommand for wrapping aws-iam-authenticator with cached token - this can be used as an alternative from creating temporary kubeconfig files
+- add "ak i" to add contexts for all or selected namespaces for all kubeconfig files and to optionally replace the aws-iam-authenticator with "ak t" command mode
+- add optional aliases in completion output
+- update documentation to reflex the aliases, and the new commands ak t and ak i

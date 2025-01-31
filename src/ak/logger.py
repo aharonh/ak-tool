@@ -8,7 +8,7 @@ def setup_logger(name: str = "ak", debug: bool = False) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG if debug else logging.INFO)
     if not logger.handlers:
-        ch = logging.StreamHandler(sys.stdout)
+        ch = logging.StreamHandler(sys.stderr)
         ch.setLevel(logging.DEBUG if debug else logging.INFO)
         fmt = logging.Formatter(
             "[%(levelname)s] [%(name)s] %(asctime)s - %(message)s",

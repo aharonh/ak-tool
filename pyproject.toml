@@ -22,7 +22,8 @@ dependencies = [
   "boto3",
   "pyyaml",
   "pytest",
-  "requests"
+  "requests",
+  "click >=8.1",
 ]
 
 [project.optional-dependencies]
