@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>API Reference &#8212; ak 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Usage Guide" href="usage.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
+<p>The following is the API reference for the <code class="docutils literal notranslate"><span class="pre">ak</span></code> package.</p>
+<dl class="py class" id="module-ak.config">
+<dt class="sig sig-object py" id="ak.config.AKConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ak.config.</span></span><span class="sig-name descname"><span class="pre">AKConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'~/.config/ak/config.ini'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak.config.AKConfig" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Loads and manages configuration for AWS and Kubernetes usage, including multiple
+AWS profiles in sections like <code class="docutils literal notranslate"><span class="pre">[aws.company]</span></code>, <code class="docutils literal notranslate"><span class="pre">[aws.home]</span></code>, etc.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="ak.config.AKConfig.aws_global_token_validity_seconds">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">aws_global_token_validity_seconds</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ak.config.AKConfig.aws_global_token_validity_seconds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the global default token validity in seconds.</p>
+<p>This is the default duration for which an AWS token remains valid (e.g., 43200s = 12 hours).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Token validity duration in seconds.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ak.config.AKConfig.credentials_file">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">credentials_file</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ak.config.AKConfig.credentials_file" title="Link to this definition">¶</a></dt>
+<dd><p>Get the path to the AWS credentials file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>AWS credentials file path.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ak.config.AKConfig.default_aws_profile">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_aws_profile</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ak.config.AKConfig.default_aws_profile" title="Link to this definition">¶</a></dt>
+<dd><p>Get the default AWS profile name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Default AWS profile.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ak.config.AKConfig.default_kube_config">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_kube_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ak.config.AKConfig.default_kube_config" title="Link to this definition">¶</a></dt>
+<dd><p>Get the default Kubernetes configuration name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Default Kubernetes configuration.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ak.config.AKConfig.get_aws_profile">
+<span class="sig-name descname"><span class="pre">get_aws_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">profile_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="headerlink" href="#ak.config.AKConfig.get_aws_profile" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieve AWS profile information for a given profile.</p>
+<p>This method fetches details such as <code class="docutils literal notranslate"><span class="pre">original_profile</span></code>, <code class="docutils literal notranslate"><span class="pre">authenticated_profile</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">mfa_serial</span></code> from the configuration section <code class="docutils literal notranslate"><span class="pre">[aws.&lt;profile_name&gt;]</span></code>.
+It also retrieves a token validity value, which may override the global default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>profile_name</strong> (<em>str</em>) – The name of the AWS profile (without the “aws.” prefix).</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>KeyError</strong> – If the profile section <code class="docutils literal notranslate"><span class="pre">[aws.&lt;profile_name&gt;]</span></code> does not exist.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A dictionary containing the AWS profile information.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ak.config.AKConfig.kube_configs_dir">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">kube_configs_dir</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ak.config.AKConfig.kube_configs_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Get the directory where Kubernetes configuration files are stored.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Kubernetes configuration directory path.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ak.config.AKConfig.kube_temp_dir">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">kube_temp_dir</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#ak.config.AKConfig.kube_temp_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Get the temporary directory used for storing Kubernetes tokens.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Temporary Kubernetes directory path.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="ak.config.AKConfig.kube_token_validity_seconds">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">kube_token_validity_seconds</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ak.config.AKConfig.kube_token_validity_seconds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the Kubernetes API token validity duration in seconds.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Token validity duration in seconds.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ak.config.AKConfig.save">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ak.config.AKConfig.save" title="Link to this definition">¶</a></dt>
+<dd><p>Save any changes made to the configuration back to the configuration file.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function" id="module-ak.cli">
+<dt class="sig sig-object py" id="ak.cli.complete_aws_profile">
+<span class="sig-prename descclassname"><span class="pre">ak.cli.</span></span><span class="sig-name descname"><span class="pre">complete_aws_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incomplete</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak.cli.complete_aws_profile" title="Link to this definition">¶</a></dt>
+<dd><p>Return a list of AWS profile names matching the incomplete text.</p>
+<p>Retrieves AWS profile names from the configuration sections that start with
+<code class="docutils literal notranslate"><span class="pre">aws.</span></code> and returns those that begin with the provided incomplete string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – Click context.</p></li>
+<li><p><strong>param</strong> – Click parameter.</p></li>
+<li><p><strong>incomplete</strong> (<em>str</em>) – Incomplete text typed by the user.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of CompletionItem objects with matching AWS profile names.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[CompletionItem]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ak.cli.complete_context_name">
+<span class="sig-prename descclassname"><span class="pre">ak.cli.</span></span><span class="sig-name descname"><span class="pre">complete_context_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incomplete</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak.cli.complete_context_name" title="Link to this definition">¶</a></dt>
+<dd><p>Return a list of Kubernetes context names matching the incomplete text.</p>
+<p>Executes the command <code class="docutils literal notranslate"><span class="pre">kubectl</span> <span class="pre">config</span> <span class="pre">get-contexts</span> <span class="pre">-o</span> <span class="pre">name</span></code> to retrieve context names,
+then filters and returns those that start with the provided incomplete string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – Click context.</p></li>
+<li><p><strong>param</strong> – Click parameter.</p></li>
+<li><p><strong>incomplete</strong> (<em>str</em>) – Incomplete text typed by the user.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of CompletionItem objects with matching Kubernetes context names.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[CompletionItem]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ak.cli.complete_kube_name">
+<span class="sig-prename descclassname"><span class="pre">ak.cli.</span></span><span class="sig-name descname"><span class="pre">complete_kube_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incomplete</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak.cli.complete_kube_name" title="Link to this definition">¶</a></dt>
+<dd><p>Return a list of kubeconfig filenames matching the incomplete text.</p>
+<p>Scans the directory specified by the configuration for kubeconfigs and returns
+filenames that start with the provided incomplete string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ctx</strong> – Click context.</p></li>
+<li><p><strong>param</strong> – Click parameter.</p></li>
+<li><p><strong>incomplete</strong> (<em>str</em>) – Incomplete text typed by the user.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of CompletionItem objects with matching kubeconfig filenames.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[CompletionItem]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ak.cli.generate_bash_zsh_wrapper">
+<span class="sig-prename descclassname"><span class="pre">ak.cli.</span></span><span class="sig-name descname"><span class="pre">generate_bash_zsh_wrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shell</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak.cli.generate_bash_zsh_wrapper" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a custom wrapper function for Bash or Zsh.</p>
+<p>The wrapper executes the ‘ak’ binary and evaluates lines that begin with
+<code class="docutils literal notranslate"><span class="pre">export</span></code> or <code class="docutils literal notranslate"><span class="pre">if</span></code> to update the shell’s environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>shell</strong> (<em>str</em>) – The shell type (“bash” or “zsh”).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A string containing the custom wrapper script.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ak.cli.generate_custom_wrapper">
+<span class="sig-prename descclassname"><span class="pre">ak.cli.</span></span><span class="sig-name descname"><span class="pre">generate_custom_wrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shell</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak.cli.generate_custom_wrapper" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a shell-specific custom function wrapper.</p>
+<p>Dispatches the wrapper generation to the appropriate function based on the shell.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>shell</strong> (<em>str</em>) – The shell name (“bash”, “zsh”, “fish”, or “powershell”).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A string containing the custom wrapper script for the specified shell.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ak.cli.generate_fish_wrapper">
+<span class="sig-prename descclassname"><span class="pre">ak.cli.</span></span><span class="sig-name descname"><span class="pre">generate_fish_wrapper</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ak.cli.generate_fish_wrapper" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a custom wrapper function for the Fish shell.</p>
+<p>The wrapper executes the ‘ak’ command and evaluates lines that begin with <code class="docutils literal notranslate"><span class="pre">export</span></code>
+or <code class="docutils literal notranslate"><span class="pre">if</span></code>, ensuring environment variables are updated correctly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A string containing the Fish shell wrapper script.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ak.cli.generate_powershell_wrapper">
+<span class="sig-prename descclassname"><span class="pre">ak.cli.</span></span><span class="sig-name descname"><span class="pre">generate_powershell_wrapper</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ak.cli.generate_powershell_wrapper" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a custom wrapper function for PowerShell.</p>
+<p>The wrapper executes the ‘ak’ command and evaluates lines that begin with <code class="docutils literal notranslate"><span class="pre">export</span></code>
+(after stripping the export keyword) so that environment variables are updated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A string containing the PowerShell wrapper script.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ak.cli.get_official_completion">
+<span class="sig-prename descclassname"><span class="pre">ak.cli.</span></span><span class="sig-name descname"><span class="pre">get_official_completion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak.cli.get_official_completion" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieve the official Click-generated shell completion script.</p>
+<p>Executes a subprocess call with the environment variable <code class="docutils literal notranslate"><span class="pre">_AK_COMPLETE</span></code> set to the
+specified mode and returns the resulting completion script.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mode</strong> (<em>str</em>) – The shell completion mode.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The shell completion script.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>subprocess.CalledProcessError</strong> – If the subprocess call fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ak.cli.get_shell_mode">
+<span class="sig-prename descclassname"><span class="pre">ak.cli.</span></span><span class="sig-name descname"><span class="pre">get_shell_mode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shell</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak.cli.get_shell_mode" title="Link to this definition">¶</a></dt>
+<dd><p>Determine the Click completion mode for the given shell.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>shell</strong> (<em>str</em>) – The shell name (e.g., “bash”, “zsh”, “fish”, “powershell”).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The Click completion mode corresponding to the shell.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the shell is unsupported.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ak.cli.main">
+<span class="sig-prename descclassname"><span class="pre">ak.cli.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ak.cli.main" title="Link to this definition">¶</a></dt>
+<dd><p>Entry point for the ‘ak’ CLI tool.</p>
+<p>Invokes the Click command group.</p>
+</dd></dl>
+
+<dl class="py class" id="module-ak.core">
+<dt class="sig sig-object py" id="ak.core.AWSManager">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ak.core.</span></span><span class="sig-name descname"><span class="pre">AWSManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#ak.config.AKConfig" title="ak.config.AKConfig"><span class="pre">AKConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Logger</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aws_profile_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak.core.AWSManager" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Manages AWS MFA login, storing credentials in the specified credentials file.</p>
+<p>This class handles AWS MFA-based authentication and stores the resulting credentials
+in an AWS CLI-compatible credentials file. It also provides an <cite>export</cite> command
+for updating environment variables.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ak.core.AWSManager.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#ak.core.AWSManager.config" title="Link to this definition">¶</a></dt>
+<dd><p>Configuration settings for AWS login.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#ak.config.AKConfig" title="ak.config.AKConfig">AKConfig</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ak.core.AWSManager.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#ak.core.AWSManager.logger" title="Link to this definition">¶</a></dt>
+<dd><p>Logger instance for debugging and error reporting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>logging.Logger</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ak.core.AWSManager.aws_profile_name">
+<span class="sig-name descname"><span class="pre">aws_profile_name</span></span><a class="headerlink" href="#ak.core.AWSManager.aws_profile_name" title="Link to this definition">¶</a></dt>
+<dd><p>The name of the AWS profile being used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ak.core.AWSManager.mfa_login">
+<span class="sig-name descname"><span class="pre">mfa_login</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mfa_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#ak.core.AWSManager.mfa_login" title="Link to this definition">¶</a></dt>
+<dd><p>Perform AWS MFA login using the original profile and MFA code.</p>
+<p>This method retrieves a temporary AWS session token using MFA,
+stores it in the AWS credentials file, and returns a shell export
+command to set <cite>AWS_PROFILE</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mfa_code</strong> (<em>str</em>) – The MFA code for authentication.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The <cite>export AWS_PROFILE=authenticated_profile</cite> command.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – If the AWS login attempt fails.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p><code class="docutils literal notranslate"><span class="pre">`python</span>
+<span class="pre">aws</span> <span class="pre">=</span> <span class="pre">AWSManager(config,</span> <span class="pre">logger,</span> <span class="pre">&quot;nuvo&quot;)</span>
+<span class="pre">export_line</span> <span class="pre">=</span> <span class="pre">aws.mfa_login(&quot;123456&quot;)</span>
+<span class="pre">print(export_line)</span>
+<span class="pre">`</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">`shell</span>
+<span class="pre">export</span> <span class="pre">AWS_PROFILE=nuvo-root-mfa</span>
+<span class="pre">`</span></code></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ak.core.KubeManager">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">ak.core.</span></span><span class="sig-name descname"><span class="pre">KubeManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#ak.config.AKConfig" title="ak.config.AKConfig"><span class="pre">AKConfig</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">logger</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Logger</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak.core.KubeManager" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Manages Kubernetes kubeconfig switching and token handling.</p>
+<p>This class provides functionality to switch Kubernetes configurations,
+refresh AWS-based authentication tokens, and ensure valid kubeconfig
+contexts.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ak.core.KubeManager.config">
+<span class="sig-name descname"><span class="pre">config</span></span><a class="headerlink" href="#ak.core.KubeManager.config" title="Link to this definition">¶</a></dt>
+<dd><p>Configuration settings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#ak.config.AKConfig" title="ak.config.AKConfig">AKConfig</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ak.core.KubeManager.logger">
+<span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#ak.core.KubeManager.logger" title="Link to this definition">¶</a></dt>
+<dd><p>Logger instance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>logging.Logger</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ak.core.KubeManager.switch_config">
+<span class="sig-name descname"><span class="pre">switch_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kubeconfig_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#ak.core.KubeManager.switch_config" title="Link to this definition">¶</a></dt>
+<dd><p>Switch to a specified kubeconfig, resolving AWS-based authentication tokens.</p>
+<p>This method ensures that the kubeconfig is copied to a temporary location
+and all <cite>aws-iam-authenticator</cite> references are replaced with static tokens.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>kubeconfig_name</strong> (<em>str</em>) – Name of the kubeconfig to switch to.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The <cite>export KUBECONFIG=…</cite> command.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>FileNotFoundError</strong> – If the kubeconfig does not exist.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ak.core.KubeManager.switch_context">
+<span class="sig-name descname"><span class="pre">switch_context</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#ak.core.KubeManager.switch_context" title="Link to this definition">¶</a></dt>
+<dd><p>Switches the active Kubernetes context and updates the shell prompt
+with context info.</p>
+<p>The prompt includes Git branch, original kubeconfig name, and current context,
+formatted for Bash, Zsh, or Fish shells.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function" id="module-ak.logger">
+<dt class="sig sig-object py" id="ak.logger.setup_logger">
+<span class="sig-prename descclassname"><span class="pre">ak.logger.</span></span><span class="sig-name descname"><span class="pre">setup_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'ak'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">debug</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Logger</span></span></span><a class="headerlink" href="#ak.logger.setup_logger" title="Link to this definition">¶</a></dt>
+<dd><p>Create and return a logger with either DEBUG or INFO level.</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ak</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#ak.config.AKConfig"><code class="docutils literal notranslate"><span class="pre">AKConfig</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.cli.complete_aws_profile"><code class="docutils literal notranslate"><span class="pre">complete_aws_profile()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.cli.complete_context_name"><code class="docutils literal notranslate"><span class="pre">complete_context_name()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.cli.complete_kube_name"><code class="docutils literal notranslate"><span class="pre">complete_kube_name()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.cli.generate_bash_zsh_wrapper"><code class="docutils literal notranslate"><span class="pre">generate_bash_zsh_wrapper()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.cli.generate_custom_wrapper"><code class="docutils literal notranslate"><span class="pre">generate_custom_wrapper()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.cli.generate_fish_wrapper"><code class="docutils literal notranslate"><span class="pre">generate_fish_wrapper()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.cli.generate_powershell_wrapper"><code class="docutils literal notranslate"><span class="pre">generate_powershell_wrapper()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.cli.get_official_completion"><code class="docutils literal notranslate"><span class="pre">get_official_completion()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.cli.get_shell_mode"><code class="docutils literal notranslate"><span class="pre">get_shell_mode()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.cli.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.core.AWSManager"><code class="docutils literal notranslate"><span class="pre">AWSManager</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.core.KubeManager"><code class="docutils literal notranslate"><span class="pre">KubeManager</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak.logger.setup_logger"><code class="docutils literal notranslate"><span class="pre">setup_logger()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="usage.html" title="previous chapter">Usage Guide</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Aharon Haravon.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/api.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
