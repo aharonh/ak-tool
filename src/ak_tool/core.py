@@ -4,7 +4,7 @@ import time
 import json
 import logging
 import yaml
-from ak_cli.config import AKConfig
+from ak_tool.config import AKConfig
 
 
 class AWSManager:

@@ -3,9 +3,9 @@ import os
 import subprocess
 import click
 from click.shell_completion import CompletionItem
-from ak_cli.config import AKConfig
-from ak_cli.logger import setup_logger
-from ak_cli.core import AWSManager, KubeManager
+from ak_tool.config import AKConfig
+from ak_tool.logger import setup_logger
+from ak_tool.core import AWSManager, KubeManager
 
 
 def complete_aws_profile(ctx, param, incomplete):
