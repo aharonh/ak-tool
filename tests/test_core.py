@@ -6,7 +6,7 @@ from src.ak.logger import setup_logger
 def test_aws_manager_init():
     cfg = AKConfig()
     logger = setup_logger(debug=True)
-    aws = AWSManager(cfg, logger)
+    aws = AWSManager(cfg, logger, "home")
     assert aws.config is cfg
 
 

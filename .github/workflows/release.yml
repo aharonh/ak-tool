@@ -1,0 +1,53 @@
+name: Publish Package and Docs
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers for tags like v1.2.3
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install Build Dependencies
+        run: pip install flit
+
+      - name: Build Package
+        run: make build
+
+      - name: Publish Package to PyPI
+        env:
+          FLIT_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: make publish
+
+  docs:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install Development Dependencies for Docs
+        run: make dev-install
+
+      - name: Build Documentation
+        run: make docs
+
+      - name: Deploy Documentation to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/_build/html

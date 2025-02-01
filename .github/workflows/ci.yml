@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, "0.1.0" ]
+  pull_request:
+    branches: [ main, "0.1.0" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8, 3.9, 3.10, 3.11]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Production Dependencies
+        run: make install
+
+      - name: Install Development Dependencies
+        run: make dev-install
+
+      - name: Lint with Flake8
+        run: make lint
+
+      - name: Check Code Formatting with Black
+        run: black --check src tests/
+
+      - name: Run Tests
+        run: make test
+
+      - name: Run Coverage
+        run: make coverage
+
+      - name: Build Documentation
+        run: make docs
+
+      # Optionally, upload artifacts such as coverage.xml or docs as needed.
+
+
+      # Uncomment the following block once you have a CODECOV_TOKEN set in your repository secrets.
+      # - name: Upload Coverage to Codecov
+      #   uses: codecov/codecov-action@v2
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     file: ./coverage.xml
+      #     flags: unittests
+      #     name: codecov-umbrella
+      #     fail_ci_if_error: true
