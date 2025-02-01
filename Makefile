@@ -1,4 +1,4 @@
-.PHONY: all install dev-install freeze test lint format coverage build publish docs docs-serve sbom
+.PHONY: all install dev-install freeze test lint format format-docstrings coverage build publish docs docs-serve sbom
 
 # Default 'all' runs install + test
 all: install test
@@ -24,6 +24,7 @@ lint:
 
 format:
 	black src tests/
+	docformatter --in-place --wrap-summaries 88 --wrap-descriptions 88 -r .
 
 coverage:
 	pytest --cov=src/ak --cov-report=xml

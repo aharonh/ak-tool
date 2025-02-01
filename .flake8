@@ -1,2 +1,5 @@
 [flake8]
 max-line-length = 88
+extend-ignore =
+    D213  ; multi-line docstring summary should start at the second line
+    D400  ; First line should end with a period (docstring)

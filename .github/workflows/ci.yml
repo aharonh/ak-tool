@@ -35,6 +35,9 @@ jobs:
       - name: Install Development Dependencies
         run: make dev-install
 
+      - name: Format Code and Docstrings
+        run: make format
+
       - name: Lint with Flake8
         run: make lint
 

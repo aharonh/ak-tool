@@ -1,15 +1,15 @@
-# ak (Access Kubernetes)
+# ak tool
 
-**ak** is a unified CLI tool that simplifies AWS MFA logins, Kubernetes context switching, and Kubernetes API token refreshing. Designed for engineers managing multiple Kubernetes clusters across different AWS accounts, **ak** streamlines daily authentication and environment management—especially when using OpenID Connect SSO, MFA, or other secure authentication methods.
+**ak** tool (**a**ccess **k**ubernetes) is a unified CLI tool that simplifies AWS MFA logins, Kubernetes context switching, and Kubernetes API token refreshing. Designed for engineers managing multiple Kubernetes clusters across different AWS accounts, **ak** streamlines daily authentication and environment management—especially when using OpenID Connect SSO, MFA, or other secure authentication methods.
 
 ---
 
 ## Table of Contents
 
-- [ak (Access Kubernetes)](#ak-access-kubernetes)
+- [ak tool](#ak-tool)
   - [Table of Contents](#table-of-contents)
   - [Quick Start](#quick-start)
-    - [1. Install Dependencies](#1-install-dependencies)
+    - [1. Install](#1-install)
     - [2. Source the Completion Script](#2-source-the-completion-script)
     - [3. Run `ak` Commands](#3-run-ak-commands)
     - [4. Prompt \& Environment Variables](#4-prompt--environment-variables)
@@ -41,21 +41,21 @@
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Install 
+
+```bash
+pip3 install ak-tool
+```
 
 **Using a virtual environment:**
 
+Assuming you have git, python3 and make installed on your system:
+
 ```bash
+git clone https://github.com/aharonh/ak-tool.git
 cd ak
 python3 -m venv .venv
 source .venv/bin/activate
-make install
-```
-
-**Local Installation:**
-
-```bash
-cd ak
 make install
 ```
 

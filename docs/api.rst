@@ -3,22 +3,22 @@ API Reference
 
 The following is the API reference for the ``ak`` package.
 
-.. automodule:: ak.config
+.. automodule:: ak_tool.config
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: ak.cli
+.. automodule:: ak_tool.cli
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: ak.core
+.. automodule:: ak_tool.core
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: ak.logger
+.. automodule:: ak_tool.logger
    :members:
    :undoc-members:
    :show-inheritance:
