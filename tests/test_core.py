@@ -1,6 +1,6 @@
-from src.ak.config import AKConfig
-from src.ak.core import AWSManager, KubeManager
-from src.ak.logger import setup_logger
+from src.ak_cli.config import AKConfig
+from src.ak_cli.core import AWSManager, KubeManager
+from src.ak_cli.logger import setup_logger
 
 
 def test_aws_manager_init():
