@@ -161,7 +161,7 @@ class KubeManager:
         current_context = self._get_current_context(temp_file)
 
         # switch to the new kubeconfig and append f"export KUBECONFIG={temp_file}" to
-        return f"export KUBECONFIG={temp_file}\n" + self.switch_context(current_context)
+        return f"export KUBECONFIG={temp_file}\n" + self.switch_context(current_context, temp_file)
 
     def _get_current_context(self, kubeconfig_path: str) -> str:
         """Gets the current Kubernetes context from the specified kubeconfig.
@@ -335,14 +335,18 @@ class KubeManager:
         with open(timestamp_file, "w") as f:
             f.write(str(int(time.time())))
 
-    def switch_context(self, context_name: str) -> str:
+    def switch_context(self, context_name: str, kubeconfig: str = '') -> str:
         """Switches the active Kubernetes context and updates the shell prompt with
         context info.
 
         The prompt includes Git branch, original kubeconfig name, and current context,
         formatted for Bash, Zsh, or Fish shells.
         """
-        kubeconfig = os.environ.get("KUBECONFIG", "")
+        if kubeconfig == '':
+            kubeconfig = os.environ.get("KUBECONFIG", "")
+            
+        self.logger.debug(f"Switching context to {context_name}")
+        self.logger.debug(f"Current KUBECONFIG: {kubeconfig}")  
         if not kubeconfig or not os.path.exists(kubeconfig):
             raise EnvironmentError("No valid KUBECONFIG set.")
 

@@ -1,0 +1,20 @@
+ak-tool @ file:///home/aharon/src/ak-tool
+boto3==1.36.11
+botocore==1.36.11
+certifi==2025.1.31
+charset-normalizer==3.4.1
+click==8.1.8
+exceptiongroup==1.2.2
+idna==3.10
+iniconfig==2.0.0
+jmespath==1.0.1
+packaging==24.2
+pluggy==1.5.0
+pytest==8.3.4
+python-dateutil==2.9.0.post0
+PyYAML==6.0.2
+requests==2.32.3
+s3transfer==0.11.2
+six==1.17.0
+tomli==2.2.1
+urllib3==2.3.0
