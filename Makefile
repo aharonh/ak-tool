@@ -27,7 +27,7 @@ lint:
 
 format:
 	black src tests/
-	docformatter --in-place --wrap-summaries 88 --wrap-descriptions 88 -r .
+	docformatter --in-place --wrap-summaries 88 --wrap-descriptions 88 -r . || true
 
 coverage:
 	pytest --cov=src/ak_tool --cov-report=xml
@@ -49,5 +49,5 @@ docs-serve:
 sbom:
 	syft ./.venv -o cyclonedx-json=sbom.json
 
-bumbversion:
+bumpversion:
 	bump2version patch

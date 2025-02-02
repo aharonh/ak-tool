@@ -141,12 +141,14 @@ class KubeManager:
 
         This method ensures that the kubeconfig is copied to a temporary location
         and all `aws-iam-authenticator` references are replaced with static tokens.
+        It returns an export command that sets the KUBECONFIG as well as (if applicable)
+        the AWS_PROFILE based on the user’s exec block.
 
         Args:
             kubeconfig_name (str): Name of the kubeconfig to switch to.
 
         Returns:
-            str: The `export KUBECONFIG=...` command.
+            str: The export command to set KUBECONFIG and possibly AWS_PROFILE.
 
         Raises:
             FileNotFoundError: If the kubeconfig does not exist.
@@ -160,8 +162,11 @@ class KubeManager:
         # get the current context from the kubeconfig
         current_context = self._get_current_context(temp_file)
 
-        # switch to the new kubeconfig and append f"export KUBECONFIG={temp_file}" to
-        return f"export KUBECONFIG={temp_file}\n" + self.switch_context(current_context, temp_file)
+        # switch to the new kubeconfig and append the export command for KUBECONFIG
+        export_kubeconfig = f"export KUBECONFIG={temp_file}\n"
+        # Also switch context within the kubeconfig
+        export_context = self.switch_context(current_context, temp_file)
+        return export_kubeconfig + export_context
 
     def _get_current_context(self, kubeconfig_path: str) -> str:
         """Gets the current Kubernetes context from the specified kubeconfig.
@@ -335,18 +340,31 @@ class KubeManager:
         with open(timestamp_file, "w") as f:
             f.write(str(int(time.time())))
 
-    def switch_context(self, context_name: str, kubeconfig: str = '') -> str:
+    def switch_context(self, context_name: str, kubeconfig: str = "") -> str:
         """Switches the active Kubernetes context and updates the shell prompt with
-        context info.
+        context info, and now also exports AWS_PROFILE if the original kubeconfig
+        defines it via an aws-iam-authenticator exec block.
 
         The prompt includes Git branch, original kubeconfig name, and current context,
         formatted for Bash, Zsh, or Fish shells.
+
+        Args:
+            context_name (str): The Kubernetes context name to switch to.
+            kubeconfig (str, optional): Path to the kubeconfig file. Defaults to the
+                KUBECONFIG environment variable if not provided.
+
+        Returns:
+            str: The shell commands to switch context and (if applicable) export AWS_PROFILE.
+
+        Raises:
+            EnvironmentError: If no valid kubeconfig is set.
+            RuntimeError: If an unsupported shell is detected.
         """
-        if kubeconfig == '':
+        if not kubeconfig:
             kubeconfig = os.environ.get("KUBECONFIG", "")
-            
+
         self.logger.debug(f"Switching context to {context_name}")
-        self.logger.debug(f"Current KUBECONFIG: {kubeconfig}")  
+        self.logger.debug(f"Current KUBECONFIG: {kubeconfig}")
         if not kubeconfig or not os.path.exists(kubeconfig):
             raise EnvironmentError("No valid KUBECONFIG set.")
 
@@ -355,10 +373,11 @@ class KubeManager:
             ["config", "use-context", context_name, "--kubeconfig", kubeconfig]
         )
 
-        shell_type = self._detect_shell_type()  # Assume this method detects the shell
-        kubeconfig_name = os.path.basename(kubeconfig)
-        # remove the -temp suffix if it exists
-        kubeconfig_name = kubeconfig_name.replace("-temp", "")
+        shell_type = self._detect_shell_type()  # Detect the shell type
+        kubeconfig_name = os.path.basename(kubeconfig).replace("-temp", "")
+
+        # Look up the AWS_PROFILE associated with this context (if any)
+        aws_profile_val = self._get_aws_profile_from_context(kubeconfig, context_name)
 
         git_cmd = (
             "branch=$(git branch --show-current 2>/dev/null); "
@@ -366,13 +385,84 @@ class KubeManager:
         )
 
         if shell_type == "bash":
-            return self._bash_prompt(kubeconfig_name, context_name, git_cmd)
+            prompt = self._bash_prompt(kubeconfig_name, context_name, git_cmd)
         elif shell_type == "zsh":
-            return self._zsh_prompt(kubeconfig_name, context_name, git_cmd)
+            prompt = self._zsh_prompt(kubeconfig_name, context_name, git_cmd)
         elif shell_type == "fish":
-            return self._fish_prompt(kubeconfig_name, context_name)
+            prompt = self._fish_prompt(kubeconfig_name, context_name)
         else:
             raise RuntimeError(f"Unsupported shell: {shell_type}")
+
+        # If an AWS_PROFILE was found, prepend the appropriate export command.
+        if aws_profile_val:
+            if shell_type in ["bash", "zsh"]:
+                export_line = f"export AWS_PROFILE={aws_profile_val}\n"
+            elif shell_type == "fish":
+                export_line = f"set -gx AWS_PROFILE {aws_profile_val}\n"
+            else:
+                export_line = f"export AWS_PROFILE={aws_profile_val}\n"
+            prompt = export_line + prompt
+
+        return prompt
+
+    def _get_aws_profile_from_context(self, kubeconfig: str, context_name: str) -> str:
+        """Extracts the AWS_PROFILE value from the original kubeconfig for the specified
+        context, if the user is configured via an aws-iam-authenticator exec block.
+
+        This method loads the original kubeconfig (derived by stripping the "-temp" suffix
+        and looking in the configured kubeconfigs directory), finds the context by name,
+        locates its associated user, and returns the AWS_PROFILE value declared in that user's
+        exec block (if any).
+
+        Args:
+            kubeconfig (str): The temporary kubeconfig file path.
+            context_name (str): The Kubernetes context name.
+
+        Returns:
+            str: The AWS_PROFILE value if found; otherwise, None.
+        """
+        # Derive the original kubeconfig file
+        original_kubeconfig = kubeconfig.replace("-temp", "")
+        original_kubeconfig = os.path.join(
+            self.config.kube_configs_dir, os.path.basename(original_kubeconfig)
+        )
+        try:
+            with open(original_kubeconfig, "r") as f:
+                kubeconfig_data = yaml.safe_load(f)
+        except Exception as e:
+            self.logger.warning(f"Could not load original kubeconfig: {e}")
+            return None
+
+        # Find the context with the specified name
+        contexts = kubeconfig_data.get("contexts", [])
+        user_name = None
+        for ctx in contexts:
+            if ctx.get("name") == context_name:
+                user_name = ctx.get("context", {}).get("user")
+                break
+        if not user_name:
+            return None
+
+        # Find the user entry corresponding to that user name
+        users = kubeconfig_data.get("users", [])
+        for user in users:
+            if user.get("name") == user_name:
+                user_data = user.get("user", {})
+                exec_block = user_data.get("exec")
+                if exec_block:
+                    return self._extract_aws_profile(exec_block)
+                break
+        return None
+
+    def _run_kubectl_command(self, args: list) -> None:
+        """Runs a kubectl command with the specified arguments.
+
+        Args:
+            args (list): The command arguments.
+        """
+        cmd = ["kubectl"] + args
+        self.logger.debug(f"Running kubectl command: {cmd}")
+        subprocess.run(cmd, check=True)
 
     def _bash_prompt(
         self, kubeconfig_name: str, context_name: str, git_cmd: str
@@ -408,10 +498,8 @@ class KubeManager:
                 if test -n "$git_branch"
                     printf ' (set_color red)(%%s)(set_color normal)' "$git_branch"
                 end
-                printf ' (set_color cyan)<%%s>(set_color normal)' \
-                    "$KUBE_PROMPT_KUBECONFIG"
-                printf ' (set_color blue){{%%s}}(set_color normal)' \
-                    "$KUBE_PROMPT_CONTEXT"
+                printf ' (set_color cyan)<%%s>(set_color normal)' "$KUBE_PROMPT_KUBECONFIG"
+                printf ' (set_color blue){{%%s}}(set_color normal)' "$KUBE_PROMPT_CONTEXT"
             end
         end
         """
@@ -465,30 +553,20 @@ class KubeManager:
             kubeconfig (str): The kubeconfig file path.
             context_name (str): The name of the context.
         """
-
-        # resolve original kubeconfig from kubeconfig-temp file by removing -temp
+        # Resolve original kubeconfig from kubeconfig-temp file by removing "-temp"
         original_kubeconfig = kubeconfig.replace("-temp", "")
-        # original_kubeconfig is in the folder ~/.kubeconfigs/<kubeconfig_name>
-        # while the temp file is in ~/.kubeconfigs_temp/<kubeconfig_name>-temp
-        # need to update the path as well
         original_kubeconfig = os.path.join(
             self.config.kube_configs_dir, os.path.basename(original_kubeconfig)
         )
 
-        temp_file, timestamp_file = self._get_temp_file_paths(original_kubeconfig)
-
         if not os.path.exists(original_kubeconfig):
             raise FileNotFoundError(f"Kubeconfig {original_kubeconfig} not found.")
 
+        temp_file, timestamp_file = self._get_temp_file_paths(
+            os.path.basename(original_kubeconfig)
+        )
+
         if self._needs_refresh(temp_file, timestamp_file):
-            self._refresh_tokens(original_kubeconfig, temp_file, timestamp_file)
-
-    def _run_kubectl_command(self, args: list) -> None:
-        """Runs a kubectl command with the specified arguments.
-
-        Args:
-            args (list): The command arguments.
-        """
-        cmd = ["kubectl"] + args
-        self.logger.debug(f"Running kubectl command: {cmd}")
-        subprocess.run(cmd, check=True)
+            self._refresh_tokens(
+                os.path.basename(original_kubeconfig), temp_file, timestamp_file
+            )
