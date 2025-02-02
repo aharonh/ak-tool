@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "ak-tool"
-version = "0.1.0"
+version = "0.1.1"
 description = "Consolidates AWS MFA login, Kubernetes context switching, and Kubernetes API token refreshing into one simple CLI tool."
 authors = [
   { name = "Aharon Haravon", email = "aharon.haravon@gmail.com" }
@@ -34,7 +34,8 @@ dev = [
   "mypy",
   "flit",
   "sphinx",
-  "docformatter"
+  "docformatter",
+  "bump2version",
 ]
 
 [project.scripts]

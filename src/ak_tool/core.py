@@ -8,8 +8,7 @@ from ak_tool.config import AKConfig
 
 
 class AWSManager:
-    """
-    Manages AWS MFA login, storing credentials in the specified credentials file.
+    """Manages AWS MFA login, storing credentials in the specified credentials file.
 
     This class handles AWS MFA-based authentication and stores the resulting credentials
     in an AWS CLI-compatible credentials file. It also provides an `export` command
@@ -22,8 +21,7 @@ class AWSManager:
     """
 
     def __init__(self, config: AKConfig, logger: logging.Logger, aws_profile_name: str):
-        """
-        Initializes the AWSManager with configuration and logging.
+        """Initializes the AWSManager with configuration and logging.
 
         Args:
             config (AKConfig): Configuration settings.
@@ -35,8 +33,7 @@ class AWSManager:
         self.aws_profile_name = aws_profile_name
 
     def mfa_login(self, mfa_code: str) -> str:
-        """
-        Perform AWS MFA login using the original profile and MFA code.
+        """Perform AWS MFA login using the original profile and MFA code.
 
         This method retrieves a temporary AWS session token using MFA,
         stores it in the AWS credentials file, and returns a shell export
@@ -93,13 +90,11 @@ class AWSManager:
         return commands
 
     def _update_credentials_file(self, profile: str, data: dict) -> None:
-        """
-        Updates the AWS credentials file with the new session token.
+        """Updates the AWS credentials file with the new session token.
 
         Args:
             profile (str): The AWS profile to store the credentials under.
             data (dict): The session token data.
-
         """
         credentials_file = self.config.credentials_file
         import configparser
@@ -120,8 +115,7 @@ class AWSManager:
 
 
 class KubeManager:
-    """
-    Manages Kubernetes kubeconfig switching and token handling.
+    """Manages Kubernetes kubeconfig switching and token handling.
 
     This class provides functionality to switch Kubernetes configurations,
     refresh AWS-based authentication tokens, and ensure valid kubeconfig
@@ -133,8 +127,7 @@ class KubeManager:
     """
 
     def __init__(self, config: AKConfig, logger: logging.Logger):
-        """
-        Initializes the KubeManager with configuration and logging.
+        """Initializes the KubeManager with configuration and logging.
 
         Args:
             config (AKConfig): Configuration settings.
@@ -144,8 +137,7 @@ class KubeManager:
         self.logger = logger
 
     def switch_config(self, kubeconfig_name: str) -> str:
-        """
-        Switch to a specified kubeconfig, resolving AWS-based authentication tokens.
+        """Switch to a specified kubeconfig, resolving AWS-based authentication tokens.
 
         This method ensures that the kubeconfig is copied to a temporary location
         and all `aws-iam-authenticator` references are replaced with static tokens.
@@ -172,8 +164,7 @@ class KubeManager:
         return f"export KUBECONFIG={temp_file}\n" + self.switch_context(current_context)
 
     def _get_current_context(self, kubeconfig_path: str) -> str:
-        """
-        Gets the current Kubernetes context from the specified kubeconfig.
+        """Gets the current Kubernetes context from the specified kubeconfig.
 
         Args:
             kubeconfig_path (str): Path to the kubeconfig file.
@@ -187,8 +178,7 @@ class KubeManager:
         return kubeconfig.get("current-context", "")
 
     def _get_temp_file_paths(self, kubeconfig_name: str) -> tuple:
-        """
-        Gets the paths for the temporary kubeconfig and its timestamp file.
+        """Gets the paths for the temporary kubeconfig and its timestamp file.
 
         Args:
             kubeconfig_name (str): The name of the kubeconfig.
@@ -203,8 +193,7 @@ class KubeManager:
         return temp_file, timestamp_file
 
     def _needs_refresh(self, temp_file: str, timestamp_file: str) -> bool:
-        """
-        Determines if a token refresh is required based on token validity.
+        """Determines if a token refresh is required based on token validity.
 
         Args:
             temp_file (str): Path to the temporary kubeconfig.
@@ -226,9 +215,8 @@ class KubeManager:
     def _refresh_tokens(
         self, kubeconfig_name: str, temp_file: str, timestamp_file: str
     ) -> None:
-        """
-        Refreshes authentication tokens by copying the original kubeconfig,
-        replacing authentication commands, and updating the timestamp.
+        """Refreshes authentication tokens by copying the original kubeconfig, replacing
+        authentication commands, and updating the timestamp.
 
         Args:
             kubeconfig_name (str): The kubeconfig name.
@@ -244,8 +232,8 @@ class KubeManager:
         self._update_timestamp(timestamp_file)
 
     def _replace_exec_with_static_tokens(self, kubeconfig_path: str) -> None:
-        """
-        Replaces `aws-iam-authenticator` exec commands in kubeconfig with static tokens.
+        """Replaces `aws-iam-authenticator` exec commands in kubeconfig with static
+        tokens.
 
         This method iterates through the users in the kubeconfig, identifies those
         that use `aws-iam-authenticator` for authentication, and replaces their
@@ -290,8 +278,8 @@ class KubeManager:
             )
 
     def _extract_aws_profile(self, exec_info: dict) -> str:
-        """
-        Extracts the `AWS_PROFILE` value from the exec command's environment variables.
+        """Extracts the `AWS_PROFILE` value from the exec command's environment
+        variables.
 
         Args:
             exec_info (dict): The exec block from the kubeconfig user definition.
@@ -309,8 +297,7 @@ class KubeManager:
         )
 
     def _generate_static_token(self, aws_profile: str, args: list) -> str:
-        """
-        Generates a static Kubernetes API token using `aws-iam-authenticator`.
+        """Generates a static Kubernetes API token using `aws-iam-authenticator`.
 
         Args:
             aws_profile (str): The AWS profile to use.
@@ -340,8 +327,7 @@ class KubeManager:
         return yaml.safe_load(result.stdout)["status"]["token"]
 
     def _update_timestamp(self, timestamp_file: str) -> None:
-        """
-        Updates the timestamp file with the current time.
+        """Updates the timestamp file with the current time.
 
         Args:
             timestamp_file (str): Path to the timestamp file.
@@ -350,9 +336,8 @@ class KubeManager:
             f.write(str(int(time.time())))
 
     def switch_context(self, context_name: str) -> str:
-        """
-        Switches the active Kubernetes context and updates the shell prompt
-        with context info.
+        """Switches the active Kubernetes context and updates the shell prompt with
+        context info.
 
         The prompt includes Git branch, original kubeconfig name, and current context,
         formatted for Bash, Zsh, or Fish shells.
@@ -428,8 +413,7 @@ class KubeManager:
         """
 
     def _detect_shell_type(self) -> str:
-        """
-        Detects the current shell type by checking the parent process and environment
+        """Detects the current shell type by checking the parent process and environment
         variables.
 
         Returns:
@@ -470,8 +454,8 @@ class KubeManager:
         return "bash"
 
     def _ensure_valid_token(self, kubeconfig: str, context_name: str) -> None:
-        """
-        Ensures that the specified Kubernetes context has a valid authentication token.
+        """Ensures that the specified Kubernetes context has a valid authentication
+        token.
 
         Args:
             kubeconfig (str): The kubeconfig file path.
@@ -496,8 +480,7 @@ class KubeManager:
             self._refresh_tokens(original_kubeconfig, temp_file, timestamp_file)
 
     def _run_kubectl_command(self, args: list) -> None:
-        """
-        Runs a kubectl command with the specified arguments.
+        """Runs a kubectl command with the specified arguments.
 
         Args:
             args (list): The command arguments.

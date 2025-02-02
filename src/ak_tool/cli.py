@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+"""CLI entry point for the 'ak' tool.
+
+This module provides the command-line interface for the 'ak' tool, which consolidates
+AWS MFA login, Kubernetes context switching, and Kubernetes API token refreshing into
+one simple CLI tool. It also includes functionality to print out the current version
+when called with --version.
+"""
+
 import sys
 import os
 import subprocess
@@ -6,11 +15,13 @@ from click.shell_completion import CompletionItem
 from ak_tool.config import AKConfig
 from ak_tool.logger import setup_logger
 from ak_tool.core import AWSManager, KubeManager
+from ak_tool import (
+    __version__,
+)  # Ensure that __version__ is defined in ak_tool/__init__.py
 
 
 def complete_aws_profile(ctx, param, incomplete):
-    """
-    Return a list of AWS profile names matching the incomplete text.
+    """Return a list of AWS profile names matching the incomplete text.
 
     Retrieves AWS profile names from the configuration sections that start with
     ``aws.`` and returns those that begin with the provided incomplete string.
@@ -33,8 +44,7 @@ def complete_aws_profile(ctx, param, incomplete):
 
 
 def complete_kube_name(ctx, param, incomplete):
-    """
-    Return a list of kubeconfig filenames matching the incomplete text.
+    """Return a list of kubeconfig filenames matching the incomplete text.
 
     Scans the directory specified by the configuration for kubeconfigs and returns
     filenames that start with the provided incomplete string.
@@ -61,8 +71,7 @@ def complete_kube_name(ctx, param, incomplete):
 
 
 def complete_context_name(ctx, param, incomplete):
-    """
-    Return a list of Kubernetes context names matching the incomplete text.
+    """Return a list of Kubernetes context names matching the incomplete text.
 
     Executes the command ``kubectl config get-contexts -o name`` to retrieve context names,
     then filters and returns those that start with the provided incomplete string.
@@ -92,6 +101,7 @@ def complete_context_name(ctx, param, incomplete):
     return items
 
 
+@click.version_option(version=__version__, prog_name="ak")
 @click.group()
 @click.option("--debug", is_flag=True, help="Enable debug logging.")
 @click.option(
@@ -101,13 +111,15 @@ def complete_context_name(ctx, param, incomplete):
 )
 @click.pass_context
 def ak(ctx, debug, aws_profile):
-    """
-    Main entry point for the 'ak' CLI tool.
+    """Main entry point for the 'ak' CLI tool.
 
     This group command initializes the logger, configuration, and AWS profile settings,
     passing them via the Click context to subcommands.
 
-    :param ctx: Click context.
+    Additionally, when invoked with the ``--version`` flag, the current version of the tool
+    will be printed to the console.
+
+    :param ctx: Click context containing the logger and configuration.
     :param debug: Flag to enable debug logging.
     :param aws_profile: AWS profile name to be used.
     """
@@ -123,8 +135,7 @@ def ak(ctx, debug, aws_profile):
 @click.argument("mfa_code", required=True)
 @click.pass_context
 def login_command(ctx, mfa_code):
-    """
-    Perform AWS MFA login.
+    """Perform AWS MFA login.
 
     Uses the specified (or default) AWS profile to fetch an MFA-based STS session token.
     The command prints an export statement (e.g., ``export AWS_PROFILE=...``) so that the
@@ -154,8 +165,7 @@ def login_command(ctx, mfa_code):
 @click.argument("kube_name", required=True, shell_complete=complete_kube_name)
 @click.pass_context
 def switch_kubeconfig(ctx, kube_name):
-    """
-    Switch to a specific Kubernetes configuration.
+    """Switch to a specific Kubernetes configuration.
 
     Copies the specified kubeconfig to a temporary file (refreshing tokens if necessary)
     and prints an export statement (e.g., ``export KUBECONFIG=...``) so the calling shell
@@ -181,8 +191,7 @@ def switch_kubeconfig(ctx, kube_name):
 @click.argument("context_name", required=True, shell_complete=complete_context_name)
 @click.pass_context
 def switch_context(ctx, context_name):
-    """
-    Switch the current Kubernetes context.
+    """Switch the current Kubernetes context.
 
     Updates the active context in the existing temporary kubeconfig and adjusts the
     shell prompt (PS1) accordingly.
@@ -206,11 +215,10 @@ def switch_context(ctx, context_name):
 @ak.command("r", help="Force token refresh for the current KUBECONFIG.")
 @click.pass_context
 def force_refresh(ctx):
-    """
-    Force a refresh of the Kubernetes API token.
+    """Force a refresh of the Kubernetes API token.
 
-    This command touches the token timestamp so that a new token will be generated on the
-    next use of kubectl.
+    This command touches the token timestamp so that a new token will be generated on
+    the next use of kubectl.
 
     :param ctx: Click context containing the logger and configuration.
     """
@@ -226,8 +234,7 @@ def force_refresh(ctx):
 
 
 def get_shell_mode(shell):
-    """
-    Determine the Click completion mode for the given shell.
+    """Determine the Click completion mode for the given shell.
 
     :param shell: The shell name (e.g., "bash", "zsh", "fish", "powershell").
     :type shell: str
@@ -248,8 +255,7 @@ def get_shell_mode(shell):
 
 
 def get_official_completion(mode):
-    """
-    Retrieve the official Click-generated shell completion script.
+    """Retrieve the official Click-generated shell completion script.
 
     Executes a subprocess call with the environment variable ``_AK_COMPLETE`` set to the
     specified mode and returns the resulting completion script.
@@ -277,8 +283,7 @@ def get_official_completion(mode):
 
 
 def generate_bash_zsh_wrapper(shell):
-    """
-    Generate a custom wrapper function for Bash or Zsh.
+    """Generate a custom wrapper function for Bash or Zsh.
 
     The wrapper executes the 'ak' binary and evaluates lines that begin with
     ``export`` or ``if`` to update the shell's environment.
@@ -306,8 +311,7 @@ echo "Loaded {shell} completion and function wrapper for 'ak'."
 
 
 def generate_fish_wrapper():
-    """
-    Generate a custom wrapper function for the Fish shell.
+    """Generate a custom wrapper function for the Fish shell.
 
     The wrapper executes the 'ak' command and evaluates lines that begin with ``export``
     or ``if``, ensuring environment variables are updated correctly.
@@ -331,8 +335,7 @@ echo "Loaded Fish completion and function wrapper for 'ak'."
 
 
 def generate_powershell_wrapper():
-    """
-    Generate a custom wrapper function for PowerShell.
+    """Generate a custom wrapper function for PowerShell.
 
     The wrapper executes the 'ak' command and evaluates lines that begin with ``export``
     (after stripping the export keyword) so that environment variables are updated.
@@ -356,8 +359,7 @@ Write-Host "Loaded PowerShell completion and function wrapper for 'ak'."
 
 
 def generate_custom_wrapper(shell):
-    """
-    Generate a shell-specific custom function wrapper.
+    """Generate a shell-specific custom function wrapper.
 
     Dispatches the wrapper generation to the appropriate function based on the shell.
 
@@ -385,8 +387,7 @@ def generate_custom_wrapper(shell):
     "shell", type=click.Choice(["bash", "zsh", "fish", "powershell"]), default="bash"
 )
 def completion_cmd(shell):
-    """
-    Generate a shell completion script and custom function wrapper.
+    """Generate a shell completion script and custom function wrapper.
 
     This command prints the official Click-generated shell completion script for the
     chosen shell, then appends a shell-specific wrapper function that evaluates lines
@@ -409,8 +410,7 @@ def completion_cmd(shell):
 
 
 def main():
-    """
-    Entry point for the 'ak' CLI tool.
+    """Entry point for the 'ak' CLI tool.
 
     Invokes the Click command group.
     """

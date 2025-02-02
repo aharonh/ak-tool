@@ -5,7 +5,7 @@ all: install test
 
 # Installs from pinned versions in requirements.txt
 install:
-	pip install -r requirements.txt
+	pip install .
 
 # Installs latest main + dev extras dependencies
 dev-install:
@@ -15,6 +15,9 @@ dev-install:
 # Freezes current environment into requirements.txt
 freeze:
 	pip freeze > requirements.txt
+
+dev-freeze:
+	pip freeze > requirements-dev.txt
 
 test:
 	pytest tests/ --verbose
@@ -27,7 +30,7 @@ format:
 	docformatter --in-place --wrap-summaries 88 --wrap-descriptions 88 -r .
 
 coverage:
-	pytest --cov=src/ak --cov-report=xml
+	pytest --cov=src/ak_tool --cov-report=xml
 
 build:
 	flit build
@@ -43,5 +46,8 @@ docs:
 docs-serve:
 	sphinx-build -b html docs docs/_build/html && python -m http.server --directory docs/_build/html
 
-make sbom:
+sbom:
 	syft ./.venv -o cyclonedx-json=sbom.json
+
+bumbversion:
+	bump2version patch

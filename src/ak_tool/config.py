@@ -4,20 +4,17 @@ from pathlib import Path
 
 
 class AKConfig:
-    """
-    Loads and manages configuration for AWS and Kubernetes usage, including multiple
-    AWS profiles in sections like ``[aws.company]``, ``[aws.home]``, etc.
-    """
+    """Loads and manages configuration for AWS and Kubernetes usage, including multiple
+    AWS profiles in sections like ``[aws.company]``, ``[aws.home]``, etc."""
 
     def __init__(self, config_path: str = "~/.config/ak/config.ini"):
-        """
-        Initialize the AKConfig object.
+        """Initialize the AKConfig object.
 
-        This method expands the user path, ensures the configuration file exists,
-        and loads the configuration.
+        This method expands the user path, ensures the configuration file exists, and
+        loads the configuration.
 
-        :param config_path: Path to the configuration file.
-                            Defaults to "~/.config/ak/config.ini".
+        :param config_path: Path to the configuration file. Defaults to
+            "~/.config/ak/config.ini".
         :type config_path: str
         """
         self.config_path = os.path.expanduser(config_path)
@@ -26,8 +23,7 @@ class AKConfig:
         self._cp.read(self.config_path)
 
     def _ensure_exists(self):
-        """
-        Ensure that the configuration file exists.
+        """Ensure that the configuration file exists.
 
         If the configuration file does not exist, create a default one with minimal
         sections for AWS and Kubernetes.
@@ -62,9 +58,7 @@ class AKConfig:
                 self._cp.write(f)
 
     def save(self):
-        """
-        Save any changes made to the configuration back to the configuration file.
-        """
+        """Save any changes made to the configuration back to the configuration file."""
         with open(self.config_path, "w") as f:
             self._cp.write(f)
 
@@ -74,8 +68,7 @@ class AKConfig:
 
     @property
     def credentials_file(self) -> str:
-        """
-        Get the path to the AWS credentials file.
+        """Get the path to the AWS credentials file.
 
         :return: AWS credentials file path.
         :rtype: str
@@ -84,10 +77,10 @@ class AKConfig:
 
     @property
     def aws_global_token_validity_seconds(self) -> int:
-        """
-        Get the global default token validity in seconds.
+        """Get the global default token validity in seconds.
 
-        This is the default duration for which an AWS token remains valid (e.g., 43200s = 12 hours).
+        This is the default duration for which an AWS token remains valid (e.g., 43200s
+        = 12 hours).
 
         :return: Token validity duration in seconds.
         :rtype: int
@@ -96,8 +89,7 @@ class AKConfig:
 
     @property
     def default_aws_profile(self) -> str:
-        """
-        Get the default AWS profile name.
+        """Get the default AWS profile name.
 
         :return: Default AWS profile.
         :rtype: str
@@ -109,8 +101,7 @@ class AKConfig:
     # ----------------------------------------------------------------------
 
     def get_aws_profile(self, profile_name: str) -> dict:
-        """
-        Retrieve AWS profile information for a given profile.
+        """Retrieve AWS profile information for a given profile.
 
         This method fetches details such as ``original_profile``, ``authenticated_profile``,
         and ``mfa_serial`` from the configuration section ``[aws.<profile_name>]``.
@@ -148,8 +139,7 @@ class AKConfig:
 
     @property
     def kube_configs_dir(self) -> str:
-        """
-        Get the directory where Kubernetes configuration files are stored.
+        """Get the directory where Kubernetes configuration files are stored.
 
         :return: Kubernetes configuration directory path.
         :rtype: str
@@ -158,8 +148,7 @@ class AKConfig:
 
     @property
     def kube_temp_dir(self) -> str:
-        """
-        Get the temporary directory used for storing Kubernetes tokens.
+        """Get the temporary directory used for storing Kubernetes tokens.
 
         :return: Temporary Kubernetes directory path.
         :rtype: str
@@ -168,8 +157,7 @@ class AKConfig:
 
     @property
     def kube_token_validity_seconds(self) -> int:
-        """
-        Get the Kubernetes API token validity duration in seconds.
+        """Get the Kubernetes API token validity duration in seconds.
 
         :return: Token validity duration in seconds.
         :rtype: int
@@ -178,8 +166,7 @@ class AKConfig:
 
     @property
     def default_kube_config(self) -> str:
-        """
-        Get the default Kubernetes configuration name.
+        """Get the default Kubernetes configuration name.
 
         :return: Default Kubernetes configuration.
         :rtype: str
