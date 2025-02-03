@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import subprocess
 import time
 import json
@@ -570,3 +571,28 @@ class KubeManager:
             self._refresh_tokens(
                 os.path.basename(original_kubeconfig), temp_file, timestamp_file
             )
+
+    def force_refresh(self, kubeconfig: str = "") -> None:
+        """Forces a token refresh for the specified kubeconfig.
+
+        Args:
+            kubeconfig (str): The name of the kubeconfig to refresh.
+            Defaults to the basename of the KUBECONFIG environment variable.
+            If set to "all", refreshes all kubeconfigs in the configured
+            directory.
+        """
+        if not kubeconfig:
+            kubeconfig = Path(os.environ.get("KUBECONFIG", "")).name.replace(
+                "-temp", ""
+            )
+        if kubeconfig == "all":
+            self.logger.debug(
+                f"Forcing refresh for all kubeconfigs in {self.config.kube_configs_dir}."
+            )
+            for config_file in Path(self.config.kube_configs_dir).iterdir():
+                if config_file.suffix != ".timestamp":
+                    self.force_refresh(config_file.name)
+        else:
+            temp_file, timestamp_file = self._get_temp_file_paths(kubeconfig)
+            self._refresh_tokens(kubeconfig, temp_file, timestamp_file)
+            self.logger.debug(f"Token refresh forced for {kubeconfig}")

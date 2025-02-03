@@ -212,13 +212,22 @@ def switch_context(ctx, context_name):
         sys.exit(1)
 
 
-@ak.command("r", help="Force token refresh for the current KUBECONFIG.")
+@ak.command(
+    "r", help="Force token refresh. By default, refreshes tokens in current KUBECONFIG."
+)
+@click.option(
+    "--kubeconfig",
+    "-k",
+    default="",
+    help="Name of kubeconfig file to refresh. Use 'all' to refresh all kubeconfigs.",
+    shell_complete=complete_kube_name,
+)
 @click.pass_context
-def force_refresh(ctx):
+def force_refresh(ctx, kubeconfig):
     """Force a refresh of the Kubernetes API token.
 
-    This command touches the token timestamp so that a new token will be generated on
-    the next use of kubectl.
+    This command refreshes all the static Kubernetes API tokens for the current
+    kubeconfig.
 
     :param ctx: Click context containing the logger and configuration.
     """
@@ -227,7 +236,7 @@ def force_refresh(ctx):
     kube_mgr = KubeManager(config, logger)
 
     try:
-        kube_mgr.force_refresh()
+        kube_mgr.force_refresh(kubeconfig)
     except Exception as e:
         logger.error(str(e))
         sys.exit(1)

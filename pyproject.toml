@@ -24,6 +24,7 @@ dependencies = [
   "pytest",
   "requests",
   "click >=8.1",
+  "python-crontab",
 ]
 
 [project.optional-dependencies]
