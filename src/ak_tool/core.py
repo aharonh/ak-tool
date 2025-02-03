@@ -382,7 +382,7 @@ class KubeManager:
 
         git_cmd = (
             "branch=$(git branch --show-current 2>/dev/null); "
-            'if [ -n "$branch" ]; then echo "($branch)"; fi'
+            'if [ -n "$branch" ]; then echo "$branch"; fi'
         )
 
         if shell_type == "bash":
@@ -465,45 +465,53 @@ class KubeManager:
         self.logger.debug(f"Running kubectl command: {cmd}")
         subprocess.run(cmd, check=True)
 
-    def _bash_prompt(
-        self, kubeconfig_name: str, context_name: str, git_cmd: str
-    ) -> str:
-        git_part = rf"\[\e[31m\]$({git_cmd})\[\e[0m\]"
-        kube_part = rf"\[\e[36m\]<{kubeconfig_name}>\e[0m"
-        context_part = rf"\[\e[34m\]{{{context_name}}}\[\e[0m\]"
-        parts = f"{git_part} {kube_part} {context_part}"
-        return (
-            'if [ -z "$ORIG_PS1" ]; then ORIG_PS1="${PS1%\\\\\\$*}"; fi\n'
-            f'export PS1="$ORIG_PS1 {parts} \\\\$ "'
-        )
+    def _bash_prompt(self, kubeconfig_name: str, context_name: str, git_cmd: str) -> str:
+        # This snippet re-reads PS1, removes a trailing group that looks like (…/…),
+        # then determines the current Git branch and appends the new concise context.
+        bash_prompt = r'''# Strip any trailing context group (i.e. one that contains a slash)
+ORIG_PS1=$(echo "$PS1" | sed -E 's/ ?\([^)]*\/[^)]*\)$//')
+branch=$(git branch --show-current 2>/dev/null)
+if [ -n "$branch" ]; then
+    git_part="\\[\e[31m\\]$branch\\[\e[0m\\],"
+else
+    git_part=""
+fi
+export PS1="$ORIG_PS1 ($git_part\\[\e[36m\\]{kube}\\[\e[0m\\]/\\[\e[34m\\]{ctx}\\[\e[0m\\]) \\$ "'''
+        return bash_prompt.format(kube=kubeconfig_name, ctx=context_name)
 
     def _zsh_prompt(self, kubeconfig_name: str, context_name: str, git_cmd: str) -> str:
-        git_part = rf"%F{{red}}$({git_cmd})%f"
-        kube_part = rf"%F{{cyan}}<{kubeconfig_name}>%f"
-        context_part = rf"%F{{blue}}{{{context_name}}}%f"
-        parts = f"{git_part} {kube_part} {context_part}"
-        return (
-            'if [ -z "$ORIG_PROMPT" ]; then ORIG_PROMPT="${PROMPT%%#*}"; fi\n'
-            f'export PROMPT="$ORIG_PROMPT {parts} %# "'
-        )
+        zsh_prompt = r'''# Remove any trailing context group (i.e. one that contains a slash)
+ORIG_PROMPT=$(echo "$PROMPT" | sed -E 's/ ?\([^)]*\/[^)]*\)$//')
+branch=$(git branch --show-current 2>/dev/null)
+if [ -n "$branch" ]; then
+    git_part="%F{red}$branch%f,"
+else
+    git_part=""
+fi
+export PROMPT="$ORIG_PROMPT ($git_part%F{cyan}{kube}%f/%F{blue}{ctx}%f)%# "'''
+        return zsh_prompt.format(kube=kubeconfig_name, ctx=context_name)
 
     def _fish_prompt(self, kubeconfig_name: str, context_name: str) -> str:
         return f"""
-        set -gx KUBE_PROMPT_KUBECONFIG "{kubeconfig_name}"
-        set -gx KUBE_PROMPT_CONTEXT "{context_name}"
-        if not functions -q _kube_original_fish_prompt
-            functions -c fish_prompt _kube_original_fish_prompt
-            function fish_prompt
-                _kube_original_fish_prompt
-                set -l git_branch (git branch --show-current 2>/dev/null)
-                if test -n "$git_branch"
-                    printf ' (set_color red)(%%s)(set_color normal)' "$git_branch"
-                end
-                printf ' (set_color cyan)<%%s>(set_color normal)' "$KUBE_PROMPT_KUBECONFIG"
-                printf ' (set_color blue){{%%s}}(set_color normal)' "$KUBE_PROMPT_CONTEXT"
+    # If we have not already saved the original fish prompt, save it.
+    if not functions -q _kube_original_fish_prompt
+        functions -c fish_prompt _kube_original_fish_prompt
+        function fish_prompt
+            # Get the original prompt (this may already include extra groups like (.venv))
+            set orig (_kube_original_fish_prompt)
+            # Remove any trailing group that has a slash.
+            # The regex ' ?\\([^)]*\\/[^)]+\\)$' matches an optional space and a group with a slash at the end.
+            set orig (string replace -r ' ?\\([^)]*\\/[^)]+\\)$' '' "$orig")
+            set -l git_branch (git branch --show-current 2>/dev/null)
+            if test -n "$git_branch"
+                set -l git_part (printf '%s,' (set_color red)$git_branch (set_color normal))
+            else
+                set -l git_part ""
             end
+            printf '%s (%s%s/%s)' "$orig" "$git_part" (set_color cyan)$KUBE_PROMPT_KUBECONFIG (set_color normal) (set_color blue)$KUBE_PROMPT_CONTEXT (set_color normal)
         end
-        """
+    end
+    """
 
     def _detect_shell_type(self) -> str:
         """Detects the current shell type by checking the parent process and environment
