@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 import subprocess
+import sys
+import textwrap
 import time
 import json
 import logging
@@ -37,27 +39,27 @@ class AWSManager:
         """Perform AWS MFA login using the original profile and MFA code.
 
         This method retrieves a temporary AWS session token using MFA,
-        stores it in the AWS credentials file, and returns a shell export
-        command to set `AWS_PROFILE`.
-
+        stores it in the AWS credentials file. Then it selects the default
+        kubernetes configuration.
+        
         Args:
             mfa_code (str): The MFA code for authentication.
 
         Returns:
-            str: The `export AWS_PROFILE=authenticated_profile` command.
+            str: The commands to execute to adjust env variables.
 
         Raises:
             RuntimeError: If the AWS login attempt fails.
 
         Example:
             ```python
-            aws = AWSManager(config, logger, "nuvo")
+            aws = AWSManager(config, logger, "company")
             export_line = aws.mfa_login("123456")
             print(export_line)
             ```
 
             ```shell
-            export AWS_PROFILE=nuvo-root-mfa
+            export AWS_PROFILE=company-root-mfa
             ```
         """
         self.logger.debug(f"AWSManager: MFA login for {self.aws_profile_name}")
@@ -164,7 +166,7 @@ class KubeManager:
         current_context = self._get_current_context(temp_file)
 
         # switch to the new kubeconfig and append the export command for KUBECONFIG
-        export_kubeconfig = f"export KUBECONFIG={temp_file}\n"
+        export_kubeconfig = f">>>export KUBECONFIG={temp_file}\n"
         # Also switch context within the kubeconfig
         export_context = self.switch_context(current_context, temp_file)
         return export_kubeconfig + export_context
@@ -374,35 +376,38 @@ class KubeManager:
             ["config", "use-context", context_name, "--kubeconfig", kubeconfig]
         )
 
+        self.logger.debug("Updating shell prompt")
         shell_type = self._detect_shell_type()  # Detect the shell type
+        self.logger.debug(f"Detected shell type: {shell_type}")
         kubeconfig_name = os.path.basename(kubeconfig).replace("-temp", "")
 
         # Look up the AWS_PROFILE associated with this context (if any)
         aws_profile_val = self._get_aws_profile_from_context(kubeconfig, context_name)
-
-        git_cmd = (
-            "branch=$(git branch --show-current 2>/dev/null); "
-            'if [ -n "$branch" ]; then echo "$branch"; fi'
-        )
+        
+        self.logger.debug(f"AWS_PROFILE: {aws_profile_val}")
 
         if shell_type == "bash":
-            prompt = self._bash_prompt(kubeconfig_name, context_name, git_cmd)
+            prompt = self._bash_prompt(kubeconfig_name, context_name)
         elif shell_type == "zsh":
-            prompt = self._zsh_prompt(kubeconfig_name, context_name, git_cmd)
+            prompt = self._zsh_prompt(kubeconfig_name, context_name)
         elif shell_type == "fish":
             prompt = self._fish_prompt(kubeconfig_name, context_name)
         else:
             raise RuntimeError(f"Unsupported shell: {shell_type}")
 
+        self.logger.debug(f"result: {prompt}")
+
         # If an AWS_PROFILE was found, prepend the appropriate export command.
         if aws_profile_val:
             if shell_type in ["bash", "zsh"]:
-                export_line = f"export AWS_PROFILE={aws_profile_val}\n"
+                export_line = f">>>export AWS_PROFILE={aws_profile_val}\n"
             elif shell_type == "fish":
-                export_line = f"set -gx AWS_PROFILE {aws_profile_val}\n"
+                export_line = f">>>set -gx AWS_PROFILE {aws_profile_val}\n"
             else:
-                export_line = f"export AWS_PROFILE={aws_profile_val}\n"
+                export_line = f">>>export AWS_PROFILE={aws_profile_val}\n"
             prompt = export_line + prompt
+
+        self.logger.debug(f"result with aws profile: {prompt}")
 
         return prompt
 
@@ -465,53 +470,56 @@ class KubeManager:
         self.logger.debug(f"Running kubectl command: {cmd}")
         subprocess.run(cmd, check=True)
 
-    def _bash_prompt(self, kubeconfig_name: str, context_name: str, git_cmd: str) -> str:
+    def _bash_prompt(
+        self, kubeconfig_name: str, context_name: str
+    ) -> str:
         # This snippet re-reads PS1, removes a trailing group that looks like (…/…),
         # then determines the current Git branch and appends the new concise context.
-        bash_prompt = r'''# Strip any trailing context group (i.e. one that contains a slash)
-ORIG_PS1=$(echo "$PS1" | sed -E 's/ ?\([^)]*\/[^)]*\)$//')
-branch=$(git branch --show-current 2>/dev/null)
-if [ -n "$branch" ]; then
-    git_part="\\[\e[31m\\]$branch\\[\e[0m\\],"
-else
-    git_part=""
-fi
-export PS1="$ORIG_PS1 ($git_part\\[\e[36m\\]{kube}\\[\e[0m\\]/\\[\e[34m\\]{ctx}\\[\e[0m\\]) \\$ "'''
+        bash_prompt = textwrap.dedent(r"""
+            >>>ORIG_PS1=$(echo "$PS1" | sed -E 's/ \((\\\[[^]]+m\\\][^)]*\\\[[^]]+m\\\],)?\\\[[^]]+m\\\][^)]*\\\[[^]]+m\\\]\/\\\[[^]]+m\\\][^)]*\\\[[^]]+m\\\]\)[[:space:]]*$//')
+            >>>branch=$(git branch --show-current 2>/dev/null)
+            >>>if [ -n "$branch" ]; then
+            >>>    git_part="\[\e[31m\]$branch\[\e[0m\],"
+            >>>else
+            >>>    git_part=""
+            >>>fi
+            >>>export PS1="${{ORIG_PS1}} (${{git_part}}\[\e[36m\]{kube}\[\e[0m\]/\[\e[34m\]{ctx}\[\e[0m\]) \$ "
+        """)
         return bash_prompt.format(kube=kubeconfig_name, ctx=context_name)
-
-    def _zsh_prompt(self, kubeconfig_name: str, context_name: str, git_cmd: str) -> str:
-        zsh_prompt = r'''# Remove any trailing context group (i.e. one that contains a slash)
-ORIG_PROMPT=$(echo "$PROMPT" | sed -E 's/ ?\([^)]*\/[^)]*\)$//')
-branch=$(git branch --show-current 2>/dev/null)
-if [ -n "$branch" ]; then
-    git_part="%F{red}$branch%f,"
-else
-    git_part=""
-fi
-export PROMPT="$ORIG_PROMPT ($git_part%F{cyan}{kube}%f/%F{blue}{ctx}%f)%# "'''
+    
+    def _zsh_prompt(self, kubeconfig_name: str, context_name: str) -> str:
+        zsh_prompt = textwrap.dedent(r"""# Remove any trailing context group (i.e. one that contains a slash)
+            >>>ORIG_PROMPT=$(echo "$PROMPT" | sed -E 's# ?\([^)]*/[^)]*\)$##')
+            >>>branch=$(git branch --show-current 2>/dev/null)
+            >>>if [ -n "$branch" ]; then
+            >>>    git_part="%F{red}$branch%f,"
+            >>>else
+            >>>    git_part=""
+            >>>fi
+            >>>export PROMPT="${{ORIG_PROMPT}} (${{git_part}}%F{{cyan}}{kube}%f/%F{{blue}}{ctx}%f)%# "
+        """)
         return zsh_prompt.format(kube=kubeconfig_name, ctx=context_name)
-
     def _fish_prompt(self, kubeconfig_name: str, context_name: str) -> str:
-        return f"""
-    # If we have not already saved the original fish prompt, save it.
-    if not functions -q _kube_original_fish_prompt
-        functions -c fish_prompt _kube_original_fish_prompt
-        function fish_prompt
-            # Get the original prompt (this may already include extra groups like (.venv))
-            set orig (_kube_original_fish_prompt)
-            # Remove any trailing group that has a slash.
-            # The regex ' ?\\([^)]*\\/[^)]+\\)$' matches an optional space and a group with a slash at the end.
-            set orig (string replace -r ' ?\\([^)]*\\/[^)]+\\)$' '' "$orig")
-            set -l git_branch (git branch --show-current 2>/dev/null)
-            if test -n "$git_branch"
-                set -l git_part (printf '%s,' (set_color red)$git_branch (set_color normal))
-            else
-                set -l git_part ""
-            end
-            printf '%s (%s%s/%s)' "$orig" "$git_part" (set_color cyan)$KUBE_PROMPT_KUBECONFIG (set_color normal) (set_color blue)$KUBE_PROMPT_CONTEXT (set_color normal)
-        end
-    end
-    """
+        return textwrap.dedent(f"""
+            >>>if not functions -q _kube_original_fish_prompt
+            >>>    # Save the original fish prompt for future use.
+            >>>    functions -c fish_prompt _kube_original_fish_prompt
+            >>>    function fish_prompt
+            >>>        # Get the current prompt (which might include extra groups like (.venv))
+            >>>        set orig (_kube_original_fish_prompt)
+            >>>        # Remove any trailing group that contains a slash.
+            >>>        # The regex here uses '#' as the delimiter to avoid conflicts.
+            >>>        set orig (string replace -r ' ?\\([^)]*\\/[^)]*\\)$' '' "$orig")
+            >>>        set -l git_branch (git branch --show-current 2>/dev/null)
+            >>>        if test -n "$git_branch"
+            >>>            set -l git_part (printf '%s,' (set_color red)$git_branch (set_color normal))
+            >>>        else
+            >>>            set -l git_part ""
+            >>>        end
+            >>>        printf '%s (%s%s/%s) ' "$orig" "$git_part" (set_color cyan)$KUBE_PROMPT_KUBECONFIG (set_color normal) (set_color blue)$KUBE_PROMPT_CONTEXT (set_color normal)
+            >>>    end
+            >>>end
+        """)
 
     def _detect_shell_type(self) -> str:
         """Detects the current shell type by checking the parent process and environment

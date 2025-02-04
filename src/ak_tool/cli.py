@@ -245,7 +245,7 @@ def force_refresh(ctx, kubeconfig):
 def get_shell_mode(shell):
     """Determine the Click completion mode for the given shell.
 
-    :param shell: The shell name (e.g., "bash", "zsh", "fish", "powershell").
+    :param shell: The shell name (e.g., "bash", "zsh" or "fish").
     :type shell: str
     :return: The Click completion mode corresponding to the shell.
     :rtype: str
@@ -257,8 +257,6 @@ def get_shell_mode(shell):
         return "zsh_source"
     elif shell == "fish":
         return "fish_source"
-    elif shell == "powershell":
-        return "powershell_source"
     else:
         raise ValueError(f"Unsupported shell: {shell}")
 
@@ -295,7 +293,7 @@ def generate_bash_zsh_wrapper(shell):
     """Generate a custom wrapper function for Bash or Zsh.
 
     The wrapper executes the 'ak' binary and evaluates lines that begin with
-    ``export`` or ``if`` to update the shell's environment.
+    ``>>>`` to update the shell's environment amd prompt.
 
     :param shell: The shell type ("bash" or "zsh").
     :type shell: str
@@ -303,67 +301,78 @@ def generate_bash_zsh_wrapper(shell):
     :rtype: str
     """
     return f"""
-# Wrapper function for 'ak': executes the binary and evaluates 'export' and 'if' lines
+# Wrapper function for 'ak': executes the binary and evaluates lines that start with '>>>' prefix
 function ak() {{
+    # Local variables
     local output
+    local script=""
+    
+    # Run the actual 'ak' command, capturing its output
     output=$(command ak "$@") || return 1
+    
+    # Read each line of output
     while IFS= read -r line; do
-        if [[ "$line" =~ ^(export|if)[[:space:]] ]] ; then
-            eval "$line"
+        # If the line begins with >>>, remove the prefix and accumulate
+        if [[ $line == ">>>"* ]]; then
+            # Remove '>>>' prefix
+            line="${{line#>>>}}"
+            # Append this line (plus a newline) to 'script'
+            script+="$line
+"
         else
+            # Print lines that do not start with '>>>'
             echo "$line"
         fi
     done <<< "$output"
+    
+    # Evaluate the accumulated lines at once
+    eval "$script"
 }}
-echo "Loaded {shell} completion and function wrapper for 'ak'."
 """
 
 
 def generate_fish_wrapper():
-    """Generate a custom wrapper function for the Fish shell.
+    """
+    Generate a custom wrapper function for the Fish shell.
 
-    The wrapper executes the 'ak' command and evaluates lines that begin with ``export``
-    or ``if``, ensuring environment variables are updated correctly.
-
-    :return: A string containing the Fish shell wrapper script.
-    :rtype: str
+    The wrapper executes the 'ak' command and accumulates lines that begin with
+    the '>>>' prefix into a single string, then evaluates them all at once.
+    This way, multi-line constructs like if/else/fi are preserved.
     """
     return r"""
-function ak --wraps command ak
-    set -l output (command ak $argv ^/dev/null)
+function ak --wraps=command ak
+    # Capture output of the actual 'ak' command
+    set -l output (command ak $argv)
+    
+    # We'll accumulate lines beginning with '>>>'
+    set -l script ""
+    
+    # Process each line in 'output'
     for line in $output
-        if string match --quiet --regex '^(export|if) ' "$line"
-            eval $line
+        # Check if the line begins with '>>>'
+        if test (string sub -l 3 $line) = ">>>"
+            # Remove the first four characters: '>>>' (3 angle brackets)
+            set -l stripped_line (string sub --start=3 $line)
+            
+            # Accumulate into 'script' on a new line
+            if test -z "$script"
+                set script "$stripped_line"
+            else
+                set script "$script
+$stripped_line"
+            end
         else
+            # Print lines that do not start with '>>>'
             echo $line
         end
     end
+    
+    # Evaluate the accumulated lines at once,
+    # preserving multi-line constructs
+    if not test -z "$script"
+        eval "$script"
+    end
 end
-echo "Loaded Fish completion and function wrapper for 'ak'."
-"""
-
-
-def generate_powershell_wrapper():
-    """Generate a custom wrapper function for PowerShell.
-
-    The wrapper executes the 'ak' command and evaluates lines that begin with ``export``
-    (after stripping the export keyword) so that environment variables are updated.
-
-    :return: A string containing the PowerShell wrapper script.
-    :rtype: str
-    """
-    return r"""
-function ak {
-    $output = & ak @args
-    foreach ($line in $output) {
-        if ($line -match '^(export|if)\s') {
-            Invoke-Expression ($line -replace '^export\s+', '')
-        } else {
-            Write-Output $line
-        }
-    }
-}
-Write-Host "Loaded PowerShell completion and function wrapper for 'ak'."
 """
 
 
@@ -372,7 +381,7 @@ def generate_custom_wrapper(shell):
 
     Dispatches the wrapper generation to the appropriate function based on the shell.
 
-    :param shell: The shell name ("bash", "zsh", "fish", or "powershell").
+    :param shell: The shell name ("bash", "zsh" or "fish").
     :type shell: str
     :return: A string containing the custom wrapper script for the specified shell.
     :rtype: str
@@ -381,8 +390,6 @@ def generate_custom_wrapper(shell):
         return generate_bash_zsh_wrapper(shell)
     elif shell == "fish":
         return generate_fish_wrapper()
-    elif shell == "powershell":
-        return generate_powershell_wrapper()
     else:
         click.echo(f"Unsupported shell: {shell}", err=True)
         sys.exit(1)
@@ -393,14 +400,14 @@ def generate_custom_wrapper(shell):
     help="Generate a shell completion script and custom function wrapper.",
 )
 @click.argument(
-    "shell", type=click.Choice(["bash", "zsh", "fish", "powershell"]), default="bash"
+    "shell", type=click.Choice(["bash", "zsh", "fish"]), default="bash"
 )
 def completion_cmd(shell):
     """Generate a shell completion script and custom function wrapper.
 
     This command prints the official Click-generated shell completion script for the
-    chosen shell, then appends a shell-specific wrapper function that evaluates lines
-    starting with ``export`` and ``if``.
+    chosen shell, then appends a shell-specific wrapper function that adjusts environment
+    variables and prompt.
 
     :param shell: The shell type for which to generate the completion script.
     :type shell: str
