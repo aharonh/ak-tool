@@ -1,4 +1,3 @@
-- shorten prompt - instead of <home-dev> {kube-system} use (home-dev/kube-system)
 - add "ak t" subcommand for wrapping aws-iam-authenticator with cached token - this can be used as an alternative from creating temporary kubeconfig files
 - add "ak i" to add contexts for all or selected namespaces for all kubeconfig files and to optionally replace the aws-iam-authenticator with "ak t" command mode
 - add optional aliases in completion output

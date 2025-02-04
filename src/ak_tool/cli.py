@@ -331,9 +331,53 @@ function ak() {{
 """
 
 
+def generate_bash_zsh_prompt_script() -> str:
+    """Generate a one-off script for Bash/Zsh that defines and sets a colorful prompt
+    showing user@host, directory, Git branch, and Kube context."""
+    return r"""
+# Define a function to set a new colorful prompt
+function ak_prompt {
+    # Username@Host in bold green
+    local __user_and_host="\[\033[01;32m\]\u@\h"
+
+    # Current directory in bold blue
+    local __cur_location="\[\033[01;34m\]\w"
+
+    # Reset color
+    local __reset_color="\[\033[00m\]"
+
+    # Git branch in red
+    local __git_branch_color="\[\033[31m\]"
+    local __git_branch='`git branch --show-current 2>/dev/null | sed -E "s/(.*)/\1\\\[\\\033[00m\\\],/"`'
+
+    # Kubeconfig in purple
+    local __kubeconfig_color="\[\033[35m\]"
+    local __kubeconfig='`{ [ -z "$KUBECONFIG" ] && echo '-' || basename "$KUBECONFIG" | sed 's/-temp$//'; }`'
+
+
+    # Kube context in cyan (if any)
+    local __kube_context_color="\[\033[36m\]"
+    local __kube_context='`{ c="$(kubectl config current-context 2>/dev/null)"; [ -z "$c" ] || [ -z "$KUBECONFIG" ] && echo '-' || echo "$c"; }`'
+
+    # Prompt tail in purple
+    local __prompt_tail="\$"
+
+    # Compose the final PS1
+    export PS1="${__user_and_host} ${__cur_location} "\
+"${__reset_color}("\
+"${__git_branch_color}${__git_branch}"\
+"${__kubeconfig_color}${__kubeconfig}"\
+"${__reset_color}/"\
+"${__kube_context_color}${__kube_context}"\
+"${__reset_color})"\
+"${__prompt_tail}${__reset_color} "
+}
+ak_prompt
+"""
+
+
 def generate_fish_wrapper():
-    """
-    Generate a custom wrapper function for the Fish shell.
+    """Generate a custom wrapper function for the Fish shell.
 
     The wrapper executes the 'ak' command and accumulates lines that begin with
     the '>>>' prefix into a single string, then evaluates them all at once.
@@ -376,6 +420,81 @@ end
 """
 
 
+def generate_fish_prompt_script() -> str:
+    """Generate a one-off script for Fish that defines a new fish_prompt function
+    showing user@host, directory, Git branch, and Kube context in color."""
+    return r"""
+# Override the default fish_prompt
+function fish_prompt
+    # 1. user@host in bold green
+    set_color green --bold
+    echo -n (whoami)"@"(hostname -s)" "
+
+    # 2. current directory in bold blue
+    set_color blue --bold
+    echo -n (pwd)" "
+
+    # 3. reset color, then print "("
+    set_color normal
+    echo -n "("
+
+    # 4. Git branch in red (with trailing comma if non-empty)
+    set branch (git branch --show-current 2>/dev/null)
+    if test -n "$branch"
+        set_color red
+        # Print the branch
+        echo -n $branch
+        # Reset color before the comma (mimicking your Bash approach)
+        set_color normal
+        echo -n ","
+    end
+
+    # 5. Kubeconfig in purple or '-' if empty
+    #    We replicate your Bash logic of removing a trailing "-temp".
+    #    We can do that with sed, or string replace in fish:
+    set kubecfg ""
+    if test -z "$KUBECONFIG"
+        set kubecfg "-"
+    else
+        # Use fish's string manipulation:
+        # 1) remove leading path components with 'basename'
+        # 2) remove trailing '-temp' if present
+        set tmp (basename "$KUBECONFIG")
+        # fish can't do inline 'string replace -r "s/-temp$//"', but we can do:
+        set tmp (string replace -r '-temp$' '' -- $tmp)
+        set kubecfg $tmp
+    end
+
+    set_color magenta
+    echo -n $kubecfg
+
+    # 6. Print a slash in default color
+    set_color normal
+    echo -n "/"
+
+    # 7. Kube context in cyan or '-' if empty (or if $KUBECONFIG is empty)
+    set ctx (kubectl config current-context 2>/dev/null)
+    if test -z "$ctx" -o -z "$KUBECONFIG"
+        set ctx "-"
+    end
+
+    set_color cyan
+    echo -n $ctx
+
+    # 8. close parentheses
+    set_color normal
+    echo -n ")"
+
+    # 9. final prompt symbol in purple
+    set_color magenta
+    echo -n "$ "
+
+    # 10. reset color
+    set_color normal
+end
+"""
+
+
 def generate_custom_wrapper(shell):
     """Generate a shell-specific custom function wrapper.
 
@@ -395,19 +514,28 @@ def generate_custom_wrapper(shell):
         sys.exit(1)
 
 
+def generate_prompt_script(shell: str) -> str:
+    """Return a one-off script that sets a colorized prompt displaying user@host,
+    current directory, Git branch, and Kube context for the specified shell."""
+    if shell in ["bash", "zsh"]:
+        return generate_bash_zsh_prompt_script()
+    elif shell == "fish":
+        return generate_fish_prompt_script()
+    else:
+        return ""  # or raise an error
+
+
 @ak.command(
     "completion",
     help="Generate a shell completion script and custom function wrapper.",
 )
-@click.argument(
-    "shell", type=click.Choice(["bash", "zsh", "fish"]), default="bash"
-)
+@click.argument("shell", type=click.Choice(["bash", "zsh", "fish"]), default="bash")
 def completion_cmd(shell):
     """Generate a shell completion script and custom function wrapper.
 
     This command prints the official Click-generated shell completion script for the
-    chosen shell, then appends a shell-specific wrapper function that adjusts environment
-    variables and prompt.
+    chosen shell, then appends a shell-specific wrapper function that adjusts
+    environment variables and prompt.
 
     :param shell: The shell type for which to generate the completion script.
     :type shell: str
@@ -420,9 +548,11 @@ def completion_cmd(shell):
 
     official_script = get_official_completion(mode)
     custom_wrapper = generate_custom_wrapper(shell)
+    prompt_script = generate_prompt_script(shell)
 
     click.echo(official_script)
     click.echo(custom_wrapper)
+    click.echo(prompt_script)
 
 
 def main():
