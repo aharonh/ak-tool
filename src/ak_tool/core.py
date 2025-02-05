@@ -375,6 +375,14 @@ class KubeManager:
         self._run_kubectl_command(
             ["config", "use-context", context_name, "--kubeconfig", kubeconfig]
         )
+        
+        # update current context in original kubeconfig file
+        if self.config.kube_temp_dir in kubeconfig:
+            original_kubeconfig =  os.path.join(self.config.kube_configs_dir, os.path.basename(kubeconfig).replace("-temp", "") )
+            self._run_kubectl_command(
+                ["config", "use-context", context_name, "--kubeconfig", original_kubeconfig],
+                mute=True
+            )
 
         self.logger.debug("Updating shell prompt")
         shell_type = self._detect_shell_type()  # Detect the shell type
@@ -446,7 +454,7 @@ class KubeManager:
                 break
         return None
 
-    def _run_kubectl_command(self, args: list) -> None:
+    def _run_kubectl_command(self, args: list, mute: bool = False) -> None:
         """Runs a kubectl command with the specified arguments.
 
         Args:
@@ -454,7 +462,7 @@ class KubeManager:
         """
         cmd = ["kubectl"] + args
         self.logger.debug(f"Running kubectl command: {cmd}")
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL if mute else None)
 
     def _detect_shell_type(self) -> str:
         """Detects the current shell type by checking the parent process and environment
