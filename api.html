@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>API Reference &#8212; ak 0.1.0 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
     <script src="_static/documentation_options.js?v=01f34227"></script>
@@ -45,7 +45,8 @@ AWS profiles in sections like <code class="docutils literal notranslate"><span c
 <dt class="sig sig-object py" id="ak_tool.config.AKConfig.aws_global_token_validity_seconds">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">aws_global_token_validity_seconds</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#ak_tool.config.AKConfig.aws_global_token_validity_seconds" title="Link to this definition">¶</a></dt>
 <dd><p>Get the global default token validity in seconds.</p>
-<p>This is the default duration for which an AWS token remains valid (e.g., 43200s = 12 hours).</p>
+<p>This is the default duration for which an AWS token remains valid (e.g., 43200s
+= 12 hours).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Token validity duration in seconds.</p>
@@ -171,7 +172,12 @@ It also retrieves a token validity value, which may override the global default.
 
 </dd></dl>
 
-<dl class="py function" id="module-ak_tool.cli">
+<p id="module-ak_tool.cli">CLI entry point for the ‘ak’ tool.</p>
+<p>This module provides the command-line interface for the ‘ak’ tool, which consolidates
+AWS MFA login, Kubernetes context switching, and Kubernetes API token refreshing into
+one simple CLI tool. It also includes functionality to print out the current version
+when called with –version.</p>
+<dl class="py function">
 <dt class="sig sig-object py" id="ak_tool.cli.complete_aws_profile">
 <span class="sig-prename descclassname"><span class="pre">ak_tool.cli.</span></span><span class="sig-name descname"><span class="pre">complete_aws_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ctx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incomplete</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak_tool.cli.complete_aws_profile" title="Link to this definition">¶</a></dt>
 <dd><p>Return a list of AWS profile names matching the incomplete text.</p>
@@ -241,11 +247,18 @@ filenames that start with the provided incomplete string.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="ak_tool.cli.generate_bash_zsh_prompt_script">
+<span class="sig-prename descclassname"><span class="pre">ak_tool.cli.</span></span><span class="sig-name descname"><span class="pre">generate_bash_zsh_prompt_script</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#ak_tool.cli.generate_bash_zsh_prompt_script" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a one-off script for Bash/Zsh that defines and sets a colorful prompt
+showing <a class="reference external" href="mailto:user&#37;&#52;&#48;host">user<span>&#64;</span>host</a>, directory, Git branch, and Kube context.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="ak_tool.cli.generate_bash_zsh_wrapper">
 <span class="sig-prename descclassname"><span class="pre">ak_tool.cli.</span></span><span class="sig-name descname"><span class="pre">generate_bash_zsh_wrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shell</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ak_tool.cli.generate_bash_zsh_wrapper" title="Link to this definition">¶</a></dt>
 <dd><p>Generate a custom wrapper function for Bash or Zsh.</p>
 <p>The wrapper executes the ‘ak’ binary and evaluates lines that begin with
-<code class="docutils literal notranslate"><span class="pre">export</span></code> or <code class="docutils literal notranslate"><span class="pre">if</span></code> to update the shell’s environment.</p>
+<code class="docutils literal notranslate"><span class="pre">&gt;&gt;&gt;</span></code> to update the shell’s environment amd prompt.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>shell</strong> (<em>str</em>) – The shell type (“bash” or “zsh”).</p>
@@ -266,7 +279,7 @@ filenames that start with the provided incomplete string.</p>
 <p>Dispatches the wrapper generation to the appropriate function based on the shell.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>shell</strong> (<em>str</em>) – The shell name (“bash”, “zsh”, “fish”, or “powershell”).</p>
+<dd class="field-odd"><p><strong>shell</strong> (<em>str</em>) – The shell name (“bash”, “zsh” or “fish”).</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A string containing the custom wrapper script for the specified shell.</p>
@@ -278,35 +291,26 @@ filenames that start with the provided incomplete string.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="ak_tool.cli.generate_fish_wrapper">
-<span class="sig-prename descclassname"><span class="pre">ak_tool.cli.</span></span><span class="sig-name descname"><span class="pre">generate_fish_wrapper</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ak_tool.cli.generate_fish_wrapper" title="Link to this definition">¶</a></dt>
-<dd><p>Generate a custom wrapper function for the Fish shell.</p>
-<p>The wrapper executes the ‘ak’ command and evaluates lines that begin with <code class="docutils literal notranslate"><span class="pre">export</span></code>
-or <code class="docutils literal notranslate"><span class="pre">if</span></code>, ensuring environment variables are updated correctly.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A string containing the Fish shell wrapper script.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>str</p>
-</dd>
-</dl>
+<dt class="sig sig-object py" id="ak_tool.cli.generate_fish_prompt_script">
+<span class="sig-prename descclassname"><span class="pre">ak_tool.cli.</span></span><span class="sig-name descname"><span class="pre">generate_fish_prompt_script</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#ak_tool.cli.generate_fish_prompt_script" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a one-off script for Fish that defines a new fish_prompt function
+showing <a class="reference external" href="mailto:user&#37;&#52;&#48;host">user<span>&#64;</span>host</a>, directory, Git branch, and Kube context in color.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="ak_tool.cli.generate_powershell_wrapper">
-<span class="sig-prename descclassname"><span class="pre">ak_tool.cli.</span></span><span class="sig-name descname"><span class="pre">generate_powershell_wrapper</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ak_tool.cli.generate_powershell_wrapper" title="Link to this definition">¶</a></dt>
-<dd><p>Generate a custom wrapper function for PowerShell.</p>
-<p>The wrapper executes the ‘ak’ command and evaluates lines that begin with <code class="docutils literal notranslate"><span class="pre">export</span></code>
-(after stripping the export keyword) so that environment variables are updated.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A string containing the PowerShell wrapper script.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>str</p>
-</dd>
-</dl>
+<dt class="sig sig-object py" id="ak_tool.cli.generate_fish_wrapper">
+<span class="sig-prename descclassname"><span class="pre">ak_tool.cli.</span></span><span class="sig-name descname"><span class="pre">generate_fish_wrapper</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ak_tool.cli.generate_fish_wrapper" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a custom wrapper function for the Fish shell.</p>
+<p>The wrapper executes the ‘ak’ command and accumulates lines that begin with
+the ‘&gt;&gt;&gt;’ prefix into a single string, then evaluates them all at once.
+This way, multi-line constructs like if/else/fi are preserved.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="ak_tool.cli.generate_prompt_script">
+<span class="sig-prename descclassname"><span class="pre">ak_tool.cli.</span></span><span class="sig-name descname"><span class="pre">generate_prompt_script</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shell</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#ak_tool.cli.generate_prompt_script" title="Link to this definition">¶</a></dt>
+<dd><p>Return a one-off script that sets a colorized prompt displaying <a class="reference external" href="mailto:user&#37;&#52;&#48;host">user<span>&#64;</span>host</a>,
+current directory, Git branch, and Kube context for the specified shell.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -337,7 +341,7 @@ specified mode and returns the resulting completion script.</p>
 <dd><p>Determine the Click completion mode for the given shell.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>shell</strong> (<em>str</em>) – The shell name (e.g., “bash”, “zsh”, “fish”, “powershell”).</p>
+<dd class="field-odd"><p><strong>shell</strong> (<em>str</em>) – The shell name (e.g., “bash”, “zsh” or “fish”).</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The Click completion mode corresponding to the shell.</p>
@@ -404,14 +408,14 @@ for updating environment variables.</p>
 <span class="sig-name descname"><span class="pre">mfa_login</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mfa_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#ak_tool.core.AWSManager.mfa_login" title="Link to this definition">¶</a></dt>
 <dd><p>Perform AWS MFA login using the original profile and MFA code.</p>
 <p>This method retrieves a temporary AWS session token using MFA,
-stores it in the AWS credentials file, and returns a shell export
-command to set <cite>AWS_PROFILE</cite>.</p>
+stores it in the AWS credentials file. Then it selects the default
+kubernetes configuration.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>mfa_code</strong> (<em>str</em>) – The MFA code for authentication.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The <cite>export AWS_PROFILE=authenticated_profile</cite> command.</p>
+<dd class="field-even"><p>The commands to execute to adjust env variables.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>str</p>
@@ -464,17 +468,36 @@ contexts.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="ak_tool.core.KubeManager.force_refresh">
+<span class="sig-name descname"><span class="pre">force_refresh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kubeconfig</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#ak_tool.core.KubeManager.force_refresh" title="Link to this definition">¶</a></dt>
+<dd><p>Forces a token refresh for the specified kubeconfig.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>kubeconfig</strong> (<em>str</em>) – The name of the kubeconfig to refresh.</p></li>
+<li><p><strong>variable.</strong> (<em>Defaults to the basename</em><em> of </em><em>the KUBECONFIG environment</em>)</p></li>
+<li><p><strong>&quot;all&quot;</strong> (<em>If set to</em>)</p></li>
+<li><p><strong>configured</strong> (<em>refreshes all kubeconfigs in the</em>)</p></li>
+<li><p><strong>directory.</strong></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="ak_tool.core.KubeManager.switch_config">
 <span class="sig-name descname"><span class="pre">switch_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kubeconfig_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#ak_tool.core.KubeManager.switch_config" title="Link to this definition">¶</a></dt>
 <dd><p>Switch to a specified kubeconfig, resolving AWS-based authentication tokens.</p>
 <p>This method ensures that the kubeconfig is copied to a temporary location
-and all <cite>aws-iam-authenticator</cite> references are replaced with static tokens.</p>
+and all <cite>aws-iam-authenticator</cite> references are replaced with static tokens.
+It returns an export command that sets the KUBECONFIG as well as (if applicable)
+the AWS_PROFILE based on the user’s exec block.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>kubeconfig_name</strong> (<em>str</em>) – Name of the kubeconfig to switch to.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The <cite>export KUBECONFIG=…</cite> command.</p>
+<dd class="field-even"><p>The export command to set KUBECONFIG and possibly AWS_PROFILE.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>str</p>
@@ -487,11 +510,33 @@ and all <cite>aws-iam-authenticator</cite> references are replaced with static t
 
 <dl class="py method">
 <dt class="sig sig-object py" id="ak_tool.core.KubeManager.switch_context">
-<span class="sig-name descname"><span class="pre">switch_context</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#ak_tool.core.KubeManager.switch_context" title="Link to this definition">¶</a></dt>
-<dd><p>Switches the active Kubernetes context and updates the shell prompt
-with context info.</p>
+<span class="sig-name descname"><span class="pre">switch_context</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kubeconfig</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#ak_tool.core.KubeManager.switch_context" title="Link to this definition">¶</a></dt>
+<dd><p>Switches the active Kubernetes context and updates the shell prompt with
+context info, and now also exports AWS_PROFILE if the original kubeconfig
+defines it via an aws-iam-authenticator exec block.</p>
 <p>The prompt includes Git branch, original kubeconfig name, and current context,
 formatted for Bash, Zsh, or Fish shells.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>context_name</strong> (<em>str</em>) – The Kubernetes context name to switch to.</p></li>
+<li><p><strong>kubeconfig</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to the kubeconfig file. Defaults to the
+KUBECONFIG environment variable if not provided.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The shell commands to switch context and (if applicable) export AWS_PROFILE.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>EnvironmentError</strong> – If no valid kubeconfig is set.</p></li>
+<li><p><strong>RuntimeError</strong> – If an unsupported shell is detected.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -538,10 +583,12 @@ formatted for Bash, Zsh, or Fish shells.</p>
 <li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.complete_aws_profile"><code class="docutils literal notranslate"><span class="pre">complete_aws_profile()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.complete_context_name"><code class="docutils literal notranslate"><span class="pre">complete_context_name()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.complete_kube_name"><code class="docutils literal notranslate"><span class="pre">complete_kube_name()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.generate_bash_zsh_prompt_script"><code class="docutils literal notranslate"><span class="pre">generate_bash_zsh_prompt_script()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.generate_bash_zsh_wrapper"><code class="docutils literal notranslate"><span class="pre">generate_bash_zsh_wrapper()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.generate_custom_wrapper"><code class="docutils literal notranslate"><span class="pre">generate_custom_wrapper()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.generate_fish_prompt_script"><code class="docutils literal notranslate"><span class="pre">generate_fish_prompt_script()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.generate_fish_wrapper"><code class="docutils literal notranslate"><span class="pre">generate_fish_wrapper()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.generate_powershell_wrapper"><code class="docutils literal notranslate"><span class="pre">generate_powershell_wrapper()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.generate_prompt_script"><code class="docutils literal notranslate"><span class="pre">generate_prompt_script()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.get_official_completion"><code class="docutils literal notranslate"><span class="pre">get_official_completion()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.get_shell_mode"><code class="docutils literal notranslate"><span class="pre">get_shell_mode()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ak_tool.cli.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
