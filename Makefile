@@ -1,4 +1,4 @@
-.PHONY: all install dev-install freeze test lint format format-docstrings coverage build publish docs docs-serve sbom
+.PHONY: all install dev-install freeze test lint format coverage build publish docs docs-serve sbom docs-deploy
 
 # Default 'all' runs install + test
 all: install test
@@ -38,7 +38,7 @@ build:
 publish:
 	flit publish
 
-# Build Sphinx documentation from the 'docs' directory
+# Build Sphinx docs into docs/_build/html
 docs:
 	sphinx-build -b html docs docs/_build/html
 
@@ -51,3 +51,20 @@ sbom:
 
 bumpversion:
 	bump2version patch
+
+# -----------------------------
+# Push the built docs to gh-pages
+# -----------------------------
+docs-deploy: docs
+	# Make sure docs/_build/html is committed. The '|| true' prevents errors if no changes are detected.
+	git add docs/_build/html || true
+	git commit -m "Update built docs" || true
+
+	# 1) Create a local split branch from the subtree.
+	git subtree split --prefix docs/_build/html -b gh-pages-split
+
+	# 2) Force-push that split branch to the gh-pages branch on origin.
+	git push -f origin gh-pages-split:gh-pages
+
+	# 3) Clean up the temporary local branch.
+	git branch -D gh-pages-split
