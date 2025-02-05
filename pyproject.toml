@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "ak-tool"
-version = "0.1.4"
+version = "0.1.5"
 description = "Consolidates AWS MFA login, Kubernetes context switching, and Kubernetes API token refreshing into one simple CLI tool."
 authors = [
   { name = "Aharon Haravon", email = "aharon.haravon@gmail.com" }
