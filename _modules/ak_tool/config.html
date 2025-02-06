@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ak_tool.config &#8212; ak 0.1.5 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=59fadc99"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for ak_tool.config</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">configparser</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+
+<div class="viewcode-block" id="AKConfig">
+<a class="viewcode-back" href="../../api.html#ak_tool.config.AKConfig">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AKConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Loads and manages configuration for AWS and Kubernetes usage, including multiple</span>
+<span class="sd">    AWS profiles in sections like `[aws.company]`, `[aws.home]`, etc.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;~/.config/ak/config.ini&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the AKConfig object.</span>
+
+<span class="sd">        This method expands the user path, ensures the configuration file exists, and</span>
+<span class="sd">        loads the configuration.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            config_path (str): Path to the configuration file. Defaults to</span>
+<span class="sd">                `&quot;~/.config/ak/config.ini&quot;`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">config_path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ConfigParser</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_exists</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_ensure_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Ensure that the configuration file exists.</span>
+
+<span class="sd">        If the configuration file does not exist, create a default one with minimal</span>
+<span class="sd">        sections for AWS and Kubernetes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">):</span>
+            <span class="n">config_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">)</span>
+            <span class="n">Path</span><span class="p">(</span><span class="n">config_dir</span><span class="p">)</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># Global AWS defaults</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="s2">&quot;aws&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;credentials_file&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~/.aws/credentials&quot;</span><span class="p">),</span>
+                <span class="s2">&quot;token_validity_seconds&quot;</span><span class="p">:</span> <span class="s2">&quot;43200&quot;</span><span class="p">,</span>  <span class="c1"># 12 hours by default</span>
+                <span class="s2">&quot;default_profile&quot;</span><span class="p">:</span> <span class="s2">&quot;home&quot;</span><span class="p">,</span>
+            <span class="p">}</span>
+
+            <span class="c1"># Example for a &#39;home&#39; sub-profile</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="s2">&quot;aws.home&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;original_profile&quot;</span><span class="p">:</span> <span class="s2">&quot;home&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;authenticated_profile&quot;</span><span class="p">:</span> <span class="s2">&quot;home-authenticated&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;mfa_serial&quot;</span><span class="p">:</span> <span class="s2">&quot;arn:aws:iam::222222222:mfa/token&quot;</span><span class="p">,</span>
+            <span class="p">}</span>
+
+            <span class="c1"># Kubernetes defaults</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="s2">&quot;kube&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;configs_dir&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~/.kubeconfigs&quot;</span><span class="p">),</span>
+                <span class="s2">&quot;temp_dir&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~/.kubeconfigs_temp&quot;</span><span class="p">),</span>
+                <span class="s2">&quot;token_validity_seconds&quot;</span><span class="p">:</span> <span class="s2">&quot;900&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;default_config&quot;</span><span class="p">:</span> <span class="s2">&quot;home&quot;</span><span class="p">,</span>
+            <span class="p">}</span>
+
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AKConfig.save">
+<a class="viewcode-back" href="../../api.html#ak_tool.config.AKConfig.save">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save any changes made to the configuration back to the configuration file.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f</span><span class="p">)</span></div>
+
+
+    <span class="c1"># ----------------------------------------------------------------------</span>
+    <span class="c1"># GLOBAL AWS PROPERTIES</span>
+    <span class="c1"># ----------------------------------------------------------------------</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">credentials_file</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the path to the AWS credentials file.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: AWS credentials file path.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="s2">&quot;aws&quot;</span><span class="p">][</span><span class="s2">&quot;credentials_file&quot;</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">aws_global_token_validity_seconds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the global default token validity in seconds.</span>
+
+<span class="sd">        This is the default duration for which an AWS token remains valid (e.g., 43200s</span>
+<span class="sd">        = 12 hours).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int: Token validity duration in seconds.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="s2">&quot;aws&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;token_validity_seconds&quot;</span><span class="p">,</span> <span class="s2">&quot;43200&quot;</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">default_aws_profile</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the default AWS profile name.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Default AWS profile.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="s2">&quot;aws&quot;</span><span class="p">][</span><span class="s2">&quot;default_profile&quot;</span><span class="p">]</span>
+
+    <span class="c1"># ----------------------------------------------------------------------</span>
+    <span class="c1"># MULTIPLE AWS PROFILES</span>
+    <span class="c1"># ----------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="AKConfig.get_aws_profile">
+<a class="viewcode-back" href="../../api.html#ak_tool.config.AKConfig.get_aws_profile">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_aws_profile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profile_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve AWS profile information for a given profile.</span>
+
+<span class="sd">        This method fetches details such as `original_profile`, `authenticated_profile`,</span>
+<span class="sd">        and `mfa_serial` from the configuration section `[aws.&lt;profile_name&gt;]`.</span>
+<span class="sd">        It also retrieves a token validity value, which may override the global default.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            profile_name (str): The name of the AWS profile (without the &quot;aws.&quot; prefix).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: A dictionary containing the AWS profile information.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            KeyError: If the profile section `[aws.&lt;profile_name&gt;]` does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">section</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;aws.</span><span class="si">{</span><span class="n">profile_name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="n">section</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No such profile section: [</span><span class="si">{</span><span class="n">section</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;original_profile&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="n">section</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;original_profile&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+            <span class="s2">&quot;authenticated_profile&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="n">section</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;authenticated_profile&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+            <span class="s2">&quot;mfa_serial&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="n">section</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mfa_serial&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Optionally allow overriding token validity for the specific profile.</span>
+        <span class="k">if</span> <span class="s2">&quot;token_validity_seconds&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="n">section</span><span class="p">]:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;token_validity_seconds&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="n">section</span><span class="p">][</span><span class="s2">&quot;token_validity_seconds&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;token_validity_seconds&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aws_global_token_validity_seconds</span>
+
+        <span class="k">return</span> <span class="n">data</span></div>
+
+
+    <span class="c1"># ----------------------------------------------------------------------</span>
+    <span class="c1"># KUBERNETES CONFIGURATION</span>
+    <span class="c1"># ----------------------------------------------------------------------</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">kube_configs_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the directory where Kubernetes configuration files are stored.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Kubernetes configuration directory path.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="s2">&quot;kube&quot;</span><span class="p">][</span><span class="s2">&quot;configs_dir&quot;</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">kube_temp_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the temporary directory used for storing Kubernetes tokens.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Temporary Kubernetes directory path.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="s2">&quot;kube&quot;</span><span class="p">][</span><span class="s2">&quot;temp_dir&quot;</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">kube_token_validity_seconds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the Kubernetes API token validity duration in seconds.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int: Token validity duration in seconds.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="s2">&quot;kube&quot;</span><span class="p">][</span><span class="s2">&quot;token_validity_seconds&quot;</span><span class="p">])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">default_kube_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the default Kubernetes configuration name.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Default Kubernetes configuration.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cp</span><span class="p">[</span><span class="s2">&quot;kube&quot;</span><span class="p">][</span><span class="s2">&quot;default_config&quot;</span><span class="p">]</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">ak</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Table of Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Aharon Haravon.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
