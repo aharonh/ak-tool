@@ -30,6 +30,11 @@
     - [Kubernetes \& AWS Profile Synchronization](#kubernetes--aws-profile-synchronization)
     - [Completion](#completion)
   - [Command Line Parameters](#command-line-parameters)
+    - [Commands and general options](#commands-and-general-options)
+    - [Set configuration file command](#set-configuration-file-command)
+    - [Set current context command](#set-current-context-command)
+    - [Refresh token(s) command](#refresh-tokens-command)
+    - [Completion command](#completion-command)
   - [Configuration](#configuration)
   - [Testing](#testing)
     - [Run Tests with Pytest Directly](#run-tests-with-pytest-directly)
@@ -357,28 +362,106 @@ ak completion bash | sudo tee /etc/bash_completion.d/ak
 
 ## Command Line Parameters
 
-Display the help text with:
+The ak CLI tool provides general help for the tool, and help for each of the supported commands. 
+
+Below are descriptions of the command line paramters as they are presented by the tool.
+
+### Commands and general options
 
 ```bash
 ak --help
-```
 
-Example output:
-
-```bash
 Usage: ak [OPTIONS] COMMAND [ARGS]...
+
+  ak (Access Kubernetes) consolidates AWS MFA login, Kubernetes context
+  switching, and on-demand token refresh into a single CLI tool.
+
+  For more details, see the official documentation or run 'ak COMMAND --help'
+  to learn about each command.
 
 Options:
   --debug             Enable debug logging.
-  --aws-profile TEXT  Name of AWS sub-profile section, e.g. 'company', 'home'.
+  --aws-profile TEXT  Name of AWS sub-profile section (e.g., 'company',
+                      'home').
+  --version           Show the version and exit.
   --help              Show this message and exit.
 
 Commands:
-  c           Switch to a specific kubeconfig by name.
-  completion  Generate a shell completion script and custom function...
-  l           AWS MFA login.
-  r           Force token refresh for the current KUBECONFIG.
-  x           Switch context within the current KUBECONFIG.
+  c           Switch to a named kubeconfig.
+  completion  Generate a shell completion script for bash, zsh, or fish.
+  l           Perform AWS MFA login with a one-time code.
+  r           Force a Kubernetes API token refresh.
+  x           Switch context within the active kubeconfig.
+```
+
+### Set configuration file command
+
+```bash
+ak c --help
+
+Usage: ak c [OPTIONS] KUBECONFIG_NAME
+
+  Copies the specified kubeconfig to a temporary location, refreshing tokens
+  if necessary, and prints an 'export KUBECONFIG=...' statement. This allows
+  you to quickly switch between different Kubernetes clusters.
+
+  Example: ak c dev
+
+Options:
+  --help  Show this message and exit.
+```
+
+### Set current context command
+
+```bash
+ak x --help
+
+Usage: ak x [OPTIONS] CONTEXT_NAME
+
+  Select a different context in the existing kubeconfig, then update your
+  shell prompt accordingly. Great for switching namespaces or cluster contexts
+  without changing the underlying kubeconfig file.
+
+  Example: ak x kube-system
+
+Options:
+  --help  Show this message and exit.
+```
+
+### Refresh token(s) command 
+
+```bash
+ak r --help
+
+Usage: ak r [OPTIONS]
+
+  Refresh Kubernetes tokens in the current (or specified) kubeconfig file,
+  ensuring your local environment remains authenticated. Useful if the token
+  expires or you just want to proactively refresh.
+
+  Example: ak r --kubeconfig dev
+
+Options:
+  -k, --kubeconfig TEXT  Name of kubeconfig file to refresh. Use 'all' to
+                         refresh all kubeconfigs.
+  --help                 Show this message and exit.
+```
+
+### Completion command
+
+```bash
+ak completion --help
+
+Usage: ak completion [OPTIONS] [[bash|zsh|fish]]
+
+  Generates an official Click completion script for your chosen shell (bash,
+  zsh, or fish) and a custom wrapper that updates environment variables. You
+  can source this script for interactive tab-completion.
+
+  Example:   eval "$(ak completion bash)"
+
+Options:
+  --help  Show this message and exit.
 ```
 
 ---

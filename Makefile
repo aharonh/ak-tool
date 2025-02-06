@@ -52,9 +52,6 @@ sbom:
 bumpversion:
 	bump2version patch
 
-# -----------------------------
-# Push the built docs to gh-pages
-# -----------------------------
 docs-deploy: docs
 	# Make sure docs/_build/html is committed. The '|| true' prevents errors if no changes are detected.
 	git add docs/_build/html || true

@@ -15,23 +15,22 @@ from click.shell_completion import CompletionItem
 from ak_tool.config import AKConfig
 from ak_tool.logger import setup_logger
 from ak_tool.core import AWSManager, KubeManager
-from ak_tool import (
-    __version__,
-)  # Ensure that __version__ is defined in ak_tool/__init__.py
+from ak_tool import __version__
 
 
 def complete_aws_profile(ctx, param, incomplete):
     """Return a list of AWS profile names matching the incomplete text.
 
-    Retrieves AWS profile names from the configuration sections that start with
-    ``aws.`` and returns those that begin with the provided incomplete string.
+    Retrieves AWS profile names from configuration sections that start with
+    `aws.` and returns those that begin with the provided incomplete string.
 
-    :param ctx: Click context.
-    :param param: Click parameter.
-    :param incomplete: Incomplete text typed by the user.
-    :type incomplete: str
-    :return: A list of CompletionItem objects with matching AWS profile names.
-    :rtype: list[CompletionItem]
+    Args:
+        ctx (click.Context): Click context.
+        param (click.Parameter): Click parameter.
+        incomplete (str): Incomplete text typed by the user.
+
+    Returns:
+        list[CompletionItem]: A list of CompletionItem objects with matching AWS profile names.
     """
     config = AKConfig()
     profiles = []
@@ -43,28 +42,29 @@ def complete_aws_profile(ctx, param, incomplete):
     return profiles
 
 
-def complete_kube_name(ctx, param, incomplete):
+def complete_kubeconfig_name(ctx, param, incomplete):
     """Return a list of kubeconfig filenames matching the incomplete text.
 
     Scans the directory specified by the configuration for kubeconfigs and returns
     filenames that start with the provided incomplete string.
 
-    :param ctx: Click context.
-    :param param: Click parameter.
-    :param incomplete: Incomplete text typed by the user.
-    :type incomplete: str
-    :return: A list of CompletionItem objects with matching kubeconfig filenames.
-    :rtype: list[CompletionItem]
+    Args:
+        ctx (click.Context): Click context.
+        param (click.Parameter): Click parameter.
+        incomplete (str): Incomplete text typed by the user.
+
+    Returns:
+        list[CompletionItem]: A list of CompletionItem objects with matching kubeconfig filenames.
     """
     config = AKConfig()
-    kube_dir = config.kube_configs_dir
-    kube_dir = os.path.expanduser(kube_dir)
+    kubeconfigs_dir = config.kube_configs_dir
+    kubeconfigs_dir = os.path.expanduser(kubeconfigs_dir)
 
-    if not os.path.isdir(kube_dir):
+    if not os.path.isdir(kubeconfigs_dir):
         return []
 
     items = []
-    for fname in os.listdir(kube_dir):
+    for fname in os.listdir(kubeconfigs_dir):
         if fname.startswith(incomplete):
             items.append(CompletionItem(fname))
     return items
@@ -73,15 +73,16 @@ def complete_kube_name(ctx, param, incomplete):
 def complete_context_name(ctx, param, incomplete):
     """Return a list of Kubernetes context names matching the incomplete text.
 
-    Executes the command ``kubectl config get-contexts -o name`` to retrieve context names,
+    Executes `kubectl config get-contexts -o name` to retrieve context names,
     then filters and returns those that start with the provided incomplete string.
 
-    :param ctx: Click context.
-    :param param: Click parameter.
-    :param incomplete: Incomplete text typed by the user.
-    :type incomplete: str
-    :return: A list of CompletionItem objects with matching Kubernetes context names.
-    :rtype: list[CompletionItem]
+    Args:
+        ctx (click.Context): Click context.
+        param (click.Parameter): Click parameter.
+        incomplete (str): Incomplete text typed by the user.
+
+    Returns:
+        list[CompletionItem]: A list of CompletionItem objects with matching Kubernetes context names.
     """
     try:
         result = subprocess.run(
@@ -102,11 +103,19 @@ def complete_context_name(ctx, param, incomplete):
 
 
 @click.version_option(version=__version__, prog_name="ak")
-@click.group()
+@click.group(
+    short_help="A unified CLI for AWS MFA logins and Kubernetes context management.",
+    help=(
+        "ak (Access Kubernetes) consolidates AWS MFA login, Kubernetes context switching, "
+        "and on-demand token refresh into a single CLI tool.\n\n"
+        "For more details, see the official documentation or run 'ak COMMAND --help' "
+        "to learn about each command."
+    )
+)
 @click.option("--debug", is_flag=True, help="Enable debug logging.")
 @click.option(
     "--aws-profile",
-    help="Name of AWS sub-profile section, e.g. 'company', 'home'.",
+    help="Name of AWS sub-profile section (e.g., 'company', 'home').",
     shell_complete=complete_aws_profile,
 )
 @click.pass_context
@@ -116,12 +125,13 @@ def ak(ctx, debug, aws_profile):
     This group command initializes the logger, configuration, and AWS profile settings,
     passing them via the Click context to subcommands.
 
-    Additionally, when invoked with the ``--version`` flag, the current version of the tool
+    Additionally, when invoked with the `--version` flag, the current version of the tool
     will be printed to the console.
 
-    :param ctx: Click context containing the logger and configuration.
-    :param debug: Flag to enable debug logging.
-    :param aws_profile: AWS profile name to be used.
+    Args:
+        ctx (click.Context): The Click context containing the logger and configuration.
+        debug (bool): Flag to enable debug logging.
+        aws_profile (str): AWS profile name to be used.
     """
     ctx.ensure_object(dict)
     logger = setup_logger("ak", debug=debug)
@@ -131,19 +141,28 @@ def ak(ctx, debug, aws_profile):
     ctx.obj["aws_profile"] = aws_profile
 
 
-@ak.command("l", help="AWS MFA login. Provide the MFA code.")
+@ak.command(
+    "l",
+    short_help="Perform AWS MFA login with a one-time code.",
+    help=(
+        "Use an AWS MFA one-time code (e.g., from Authenticator or a hardware token) to "
+        "generate short-lived AWS credentials under the corresponding authenticated profile. "
+        "Prints an 'export' statement to update the calling shell environment.\n\n"
+        "Example: ak l 123456"
+    )
+)
 @click.argument("mfa_code", required=True)
 @click.pass_context
 def login_command(ctx, mfa_code):
     """Perform AWS MFA login.
 
     Uses the specified (or default) AWS profile to fetch an MFA-based STS session token.
-    The command prints an export statement (e.g., ``export AWS_PROFILE=...``) so that the
+    The command prints an export statement (e.g., `export AWS_PROFILE=...`) so that the
     calling shell can update its environment accordingly.
 
-    :param ctx: Click context containing the logger and configuration.
-    :param mfa_code: The MFA code provided by the user.
-    :type mfa_code: str
+    Args:
+        ctx (click.Context): The Click context containing the logger and configuration.
+        mfa_code (str): The MFA code provided by the user.
     """
     logger = ctx.obj["logger"]
     config = ctx.obj["config"]
@@ -161,33 +180,51 @@ def login_command(ctx, mfa_code):
         sys.exit(1)
 
 
-@ak.command("c", help="Switch to a specific kubeconfig by name.")
-@click.argument("kube_name", required=True, shell_complete=complete_kube_name)
+@ak.command(
+    "c",
+    short_help="Switch to a named kubeconfig.",
+    help=(
+        "Copies the specified kubeconfig to a temporary location, refreshing tokens if "
+        "necessary, and prints an 'export KUBECONFIG=...' statement. This allows you to "
+        "quickly switch between different Kubernetes clusters.\n\n"
+        "Example: ak c dev"
+    )
+)
+@click.argument("kubeconfig_name", required=True, shell_complete=complete_kubeconfig_name)
 @click.pass_context
-def switch_kubeconfig(ctx, kube_name):
+def switch_kubeconfig(ctx, kubeconfig_name):
     """Switch to a specific Kubernetes configuration.
 
     Copies the specified kubeconfig to a temporary file (refreshing tokens if necessary)
-    and prints an export statement (e.g., ``export KUBECONFIG=...``) so the calling shell
+    and prints an export statement (e.g., `export KUBECONFIG=...`) so the calling shell
     can update its environment.
 
-    :param ctx: Click context containing the logger and configuration.
-    :param kube_name: The name of the kubeconfig to switch to.
-    :type kube_name: str
+    Args:
+        ctx (click.Context): The Click context containing the logger and configuration.
+        kubeconfig_name (str): The name of the kubeconfig to switch to.
     """
     logger = ctx.obj["logger"]
     config = ctx.obj["config"]
     kube_mgr = KubeManager(config, logger)
 
     try:
-        export_line = kube_mgr.switch_config(kube_name)
+        export_line = kube_mgr.switch_config(kubeconfig_name)
         click.echo(export_line)
     except Exception as e:
         logger.error(str(e))
         sys.exit(1)
 
 
-@ak.command("x", help="Switch context within the current KUBECONFIG.")
+@ak.command(
+    "x",
+    short_help="Switch context within the active kubeconfig.",
+    help=(
+        "Select a different context in the existing kubeconfig, then update your shell prompt "
+        "accordingly. Great for switching namespaces or cluster contexts without changing "
+        "the underlying kubeconfig file.\n\n"
+        "Example: ak x kube-system"
+    )
+)
 @click.argument("context_name", required=True, shell_complete=complete_context_name)
 @click.pass_context
 def switch_context(ctx, context_name):
@@ -196,9 +233,9 @@ def switch_context(ctx, context_name):
     Updates the active context in the existing temporary kubeconfig and adjusts the
     shell prompt (PS1) accordingly.
 
-    :param ctx: Click context containing the logger and configuration.
-    :param context_name: The Kubernetes context name to switch to.
-    :type context_name: str
+    Args:
+        ctx (click.Context): The Click context containing the logger and configuration.
+        context_name (str): The Kubernetes context name to switch to.
     """
     logger = ctx.obj["logger"]
     config = ctx.obj["config"]
@@ -213,23 +250,32 @@ def switch_context(ctx, context_name):
 
 
 @ak.command(
-    "r", help="Force token refresh. By default, refreshes tokens in current KUBECONFIG."
+    "r",
+    short_help="Force a Kubernetes API token refresh.",
+    help=(
+        "Refresh Kubernetes tokens in the current (or specified) kubeconfig file, ensuring "
+        "your local environment remains authenticated. Useful if the token expires or you "
+        "just want to proactively refresh.\n\n"
+        "Example: ak r --kubeconfig dev"
+    )
 )
 @click.option(
     "--kubeconfig",
     "-k",
     default="",
     help="Name of kubeconfig file to refresh. Use 'all' to refresh all kubeconfigs.",
-    shell_complete=complete_kube_name,
+    shell_complete=complete_kubeconfig_name,
 )
 @click.pass_context
 def force_refresh(ctx, kubeconfig):
     """Force a refresh of the Kubernetes API token.
 
     This command refreshes all the static Kubernetes API tokens for the current
-    kubeconfig.
+    kubeconfig, or for a specified kubeconfig if provided.
 
-    :param ctx: Click context containing the logger and configuration.
+    Args:
+        ctx (click.Context): The Click context containing the logger and configuration.
+        kubeconfig (str): Name of kubeconfig file to refresh. Use 'all' to refresh all kubeconfigs.
     """
     logger = ctx.obj["logger"]
     config = ctx.obj["config"]
@@ -245,11 +291,14 @@ def force_refresh(ctx, kubeconfig):
 def get_shell_mode(shell):
     """Determine the Click completion mode for the given shell.
 
-    :param shell: The shell name (e.g., "bash", "zsh" or "fish").
-    :type shell: str
-    :return: The Click completion mode corresponding to the shell.
-    :rtype: str
-    :raises ValueError: If the shell is unsupported.
+    Args:
+        shell (str): The shell name (e.g., "bash", "zsh", or "fish").
+
+    Returns:
+        str: The Click completion mode corresponding to the shell.
+
+    Raises:
+        ValueError: If the shell is unsupported.
     """
     if shell == "bash":
         return "bash_source"
@@ -264,14 +313,17 @@ def get_shell_mode(shell):
 def get_official_completion(mode):
     """Retrieve the official Click-generated shell completion script.
 
-    Executes a subprocess call with the environment variable ``_AK_COMPLETE`` set to the
-    specified mode and returns the resulting completion script.
+    Executes a subprocess call with the environment variable `_AK_COMPLETE`
+    set to the specified mode and returns the resulting completion script.
 
-    :param mode: The shell completion mode.
-    :type mode: str
-    :return: The shell completion script.
-    :rtype: str
-    :raises subprocess.CalledProcessError: If the subprocess call fails.
+    Args:
+        mode (str): The shell completion mode.
+
+    Returns:
+        str: The shell completion script.
+
+    Raises:
+        subprocess.CalledProcessError: If the subprocess call fails.
     """
     try:
         result = subprocess.run(
@@ -293,12 +345,13 @@ def generate_bash_zsh_wrapper(shell):
     """Generate a custom wrapper function for Bash or Zsh.
 
     The wrapper executes the 'ak' binary and evaluates lines that begin with
-    ``>>>`` to update the shell's environment amd prompt.
+    the `>>>` prefix to update the shell's environment and prompt.
 
-    :param shell: The shell type ("bash" or "zsh").
-    :type shell: str
-    :return: A string containing the custom wrapper script.
-    :rtype: str
+    Args:
+        shell (str): The shell type ("bash" or "zsh").
+
+    Returns:
+        str: A string containing the custom wrapper script.
     """
     return f"""
 # Wrapper function for 'ak': executes the binary and evaluates lines that start with '>>>' prefix
@@ -314,13 +367,10 @@ function ak() {{
     while IFS= read -r line; do
         # If the line begins with >>>, remove the prefix and accumulate
         if [[ $line == ">>>"* ]]; then
-            # Remove '>>>' prefix
             line="${{line#>>>}}"
-            # Append this line (plus a newline) to 'script'
             script+="$line
 "
         else
-            # Print lines that do not start with '>>>'
             echo "$line"
         fi
     done <<< "$output"
@@ -333,7 +383,11 @@ function ak() {{
 
 def generate_bash_zsh_prompt_script() -> str:
     """Generate a one-off script for Bash/Zsh that defines and sets a colorful prompt
-    showing user@host, directory, Git branch, and Kube context."""
+    showing user@host, directory, Git branch, and Kube context.
+
+    Returns:
+        str: The script for setting a colorful prompt in Bash/Zsh.
+    """
     return r"""
 # Define a function to set a new colorful prompt
 function ak_prompt {
@@ -353,7 +407,6 @@ function ak_prompt {
     # Kubeconfig in purple
     local __kubeconfig_color="\[\033[35m\]"
     local __kubeconfig='`{ [ -z "$KUBECONFIG" ] && echo '-' || basename "$KUBECONFIG" | sed 's/-temp$//'; }`'
-
 
     # Kube context in cyan (if any)
     local __kube_context_color="\[\033[36m\]"
@@ -379,26 +432,20 @@ ak_prompt
 def generate_fish_wrapper():
     """Generate a custom wrapper function for the Fish shell.
 
-    The wrapper executes the 'ak' command and accumulates lines that begin with
-    the '>>>' prefix into a single string, then evaluates them all at once.
-    This way, multi-line constructs like if/else/fi are preserved.
+    The wrapper executes the 'ak' command and accumulates lines that begin with the
+    `>>>` prefix into a single string, then evaluates them all at once.
+
+    Returns:
+        str: The custom wrapper function script for the Fish shell.
     """
     return r"""
 function ak --wraps=command ak
-    # Capture output of the actual 'ak' command
     set -l output (command ak $argv)
-    
-    # We'll accumulate lines beginning with '>>>'
     set -l script ""
     
-    # Process each line in 'output'
     for line in $output
-        # Check if the line begins with '>>>'
         if test (string sub -l 3 $line) = ">>>"
-            # Remove the first four characters: '>>>' (3 angle brackets)
             set -l stripped_line (string sub --start=3 $line)
-            
-            # Accumulate into 'script' on a new line
             if test -z "$script"
                 set script "$stripped_line"
             else
@@ -406,13 +453,10 @@ function ak --wraps=command ak
 $stripped_line"
             end
         else
-            # Print lines that do not start with '>>>'
             echo $line
         end
     end
     
-    # Evaluate the accumulated lines at once,
-    # preserving multi-line constructs
     if not test -z "$script"
         eval "$script"
     end
@@ -422,9 +466,12 @@ end
 
 def generate_fish_prompt_script() -> str:
     """Generate a one-off script for Fish that defines a new fish_prompt function
-    showing user@host, directory, Git branch, and Kube context in color."""
+    showing user@host, directory, Git branch, and Kube context in color.
+
+    Returns:
+        str: The Fish prompt script.
+    """
     return r"""
-# Override the default fish_prompt
 function fish_prompt
     # 1. user@host in bold green
     set_color green --bold
@@ -442,25 +489,17 @@ function fish_prompt
     set branch (git branch --show-current 2>/dev/null)
     if test -n "$branch"
         set_color red
-        # Print the branch
         echo -n $branch
-        # Reset color before the comma (mimicking your Bash approach)
         set_color normal
         echo -n ","
     end
 
     # 5. Kubeconfig in purple or '-' if empty
-    #    We replicate your Bash logic of removing a trailing "-temp".
-    #    We can do that with sed, or string replace in fish:
     set kubecfg ""
     if test -z "$KUBECONFIG"
         set kubecfg "-"
     else
-        # Use fish's string manipulation:
-        # 1) remove leading path components with 'basename'
-        # 2) remove trailing '-temp' if present
         set tmp (basename "$KUBECONFIG")
-        # fish can't do inline 'string replace -r "s/-temp$//"', but we can do:
         set tmp (string replace -r '-temp$' '' -- $tmp)
         set kubecfg $tmp
     end
@@ -500,10 +539,14 @@ def generate_custom_wrapper(shell):
 
     Dispatches the wrapper generation to the appropriate function based on the shell.
 
-    :param shell: The shell name ("bash", "zsh" or "fish").
-    :type shell: str
-    :return: A string containing the custom wrapper script for the specified shell.
-    :rtype: str
+    Args:
+        shell (str): The shell name ("bash", "zsh", or "fish").
+
+    Returns:
+        str: A string containing the custom wrapper script for the specified shell.
+
+    Raises:
+        SystemExit: Prints an error and exits if the shell is unsupported.
     """
     if shell in ["bash", "zsh"]:
         return generate_bash_zsh_wrapper(shell)
@@ -516,18 +559,31 @@ def generate_custom_wrapper(shell):
 
 def generate_prompt_script(shell: str) -> str:
     """Return a one-off script that sets a colorized prompt displaying user@host,
-    current directory, Git branch, and Kube context for the specified shell."""
+    current directory, Git branch, and Kube context for the specified shell.
+
+    Args:
+        shell (str): The shell name ("bash", "zsh", or "fish").
+
+    Returns:
+        str: The prompt script for the specified shell.
+    """
     if shell in ["bash", "zsh"]:
         return generate_bash_zsh_prompt_script()
     elif shell == "fish":
         return generate_fish_prompt_script()
     else:
-        return ""  # or raise an error
+        return ""
 
 
 @ak.command(
     "completion",
-    help="Generate a shell completion script and custom function wrapper.",
+    short_help="Generate a shell completion script for bash, zsh, or fish.",
+    help=(
+        "Generates an official Click completion script for your chosen shell (bash, zsh, or fish) "
+        "and a custom wrapper that updates environment variables. You can source this script for "
+        "interactive tab-completion.\n\n"
+        "Example:\n  eval \"$(ak completion bash)\""
+    )
 )
 @click.argument("shell", type=click.Choice(["bash", "zsh", "fish"]), default="bash")
 def completion_cmd(shell):
@@ -537,8 +593,8 @@ def completion_cmd(shell):
     chosen shell, then appends a shell-specific wrapper function that adjusts
     environment variables and prompt.
 
-    :param shell: The shell type for which to generate the completion script.
-    :type shell: str
+    Args:
+        shell (str): The shell type ("bash", "zsh", or "fish").
     """
     try:
         mode = get_shell_mode(shell)
