@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ak_tool.cli &#8212; ak 0.1.5 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=59fadc99"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for ak_tool.cli</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="sd">&quot;&quot;&quot;CLI entry point for the &#39;ak&#39; tool.</span>
+
+<span class="sd">This module provides the command-line interface for the &#39;ak&#39; tool, which consolidates</span>
+<span class="sd">AWS MFA login, Kubernetes context switching, and Kubernetes API token refreshing into</span>
+<span class="sd">one simple CLI tool. It also includes functionality to print out the current version</span>
+<span class="sd">when called with --version.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">click.shell_completion</span><span class="w"> </span><span class="kn">import</span> <span class="n">CompletionItem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ak_tool.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">AKConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ak_tool.logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_logger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ak_tool.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">AWSManager</span><span class="p">,</span> <span class="n">KubeManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ak_tool</span><span class="w"> </span><span class="kn">import</span> <span class="n">__version__</span>
+
+
+<div class="viewcode-block" id="complete_aws_profile">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.complete_aws_profile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">complete_aws_profile</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">incomplete</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a list of AWS profile names matching the incomplete text.</span>
+
+<span class="sd">    Retrieves AWS profile names from configuration sections that start with</span>
+<span class="sd">    `aws.` and returns those that begin with the provided incomplete string.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ctx (click.Context): Click context.</span>
+<span class="sd">        param (click.Parameter): Click parameter.</span>
+<span class="sd">        incomplete (str): Incomplete text typed by the user.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list[CompletionItem]: A list of CompletionItem objects with matching AWS profile names.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">AKConfig</span><span class="p">()</span>
+    <span class="n">profiles</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">_cp</span><span class="o">.</span><span class="n">sections</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">section</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;aws.&quot;</span><span class="p">):</span>
+            <span class="n">profile_name</span> <span class="o">=</span> <span class="n">section</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>  <span class="c1"># e.g. &quot;aws.home&quot; -&gt; &quot;home&quot;</span>
+            <span class="k">if</span> <span class="n">profile_name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">incomplete</span><span class="p">):</span>
+                <span class="n">profiles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CompletionItem</span><span class="p">(</span><span class="n">profile_name</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">profiles</span></div>
+
+
+
+<div class="viewcode-block" id="complete_kube_name">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.complete_kube_name">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">complete_kube_name</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">incomplete</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a list of kubeconfig filenames matching the incomplete text.</span>
+
+<span class="sd">    Scans the directory specified by the configuration for kubeconfigs and returns</span>
+<span class="sd">    filenames that start with the provided incomplete string.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ctx (click.Context): Click context.</span>
+<span class="sd">        param (click.Parameter): Click parameter.</span>
+<span class="sd">        incomplete (str): Incomplete text typed by the user.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list[CompletionItem]: A list of CompletionItem objects with matching kubeconfig filenames.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">AKConfig</span><span class="p">()</span>
+    <span class="n">kube_dir</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">kube_configs_dir</span>
+    <span class="n">kube_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">kube_dir</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">kube_dir</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">kube_dir</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">fname</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">incomplete</span><span class="p">):</span>
+            <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CompletionItem</span><span class="p">(</span><span class="n">fname</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">items</span></div>
+
+
+
+<div class="viewcode-block" id="complete_context_name">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.complete_context_name">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">complete_context_name</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">incomplete</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a list of Kubernetes context names matching the incomplete text.</span>
+
+<span class="sd">    Executes `kubectl config get-contexts -o name` to retrieve context names,</span>
+<span class="sd">    then filters and returns those that start with the provided incomplete string.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ctx (click.Context): Click context.</span>
+<span class="sd">        param (click.Parameter): Click parameter.</span>
+<span class="sd">        incomplete (str): Incomplete text typed by the user.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list[CompletionItem]: A list of CompletionItem objects with matching Kubernetes context names.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="s2">&quot;kubectl&quot;</span><span class="p">,</span> <span class="s2">&quot;config&quot;</span><span class="p">,</span> <span class="s2">&quot;get-contexts&quot;</span><span class="p">,</span> <span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">],</span>
+            <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">incomplete</span><span class="p">):</span>
+            <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CompletionItem</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">items</span></div>
+
+
+
+<span class="nd">@click</span><span class="o">.</span><span class="n">version_option</span><span class="p">(</span><span class="n">version</span><span class="o">=</span><span class="n">__version__</span><span class="p">,</span> <span class="n">prog_name</span><span class="o">=</span><span class="s2">&quot;ak&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">group</span><span class="p">(</span>
+    <span class="n">short_help</span><span class="o">=</span><span class="s2">&quot;A unified CLI for AWS MFA logins and Kubernetes context management.&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;ak (Access Kubernetes) consolidates AWS MFA login, Kubernetes context switching, &quot;</span>
+        <span class="s2">&quot;and on-demand token refresh into a single CLI tool.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;For more details, see the official documentation or run &#39;ak COMMAND --help&#39; &quot;</span>
+        <span class="s2">&quot;to learn about each command.&quot;</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--debug&quot;</span><span class="p">,</span> <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Enable debug logging.&quot;</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--aws-profile&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Name of AWS sub-profile section (e.g., &#39;company&#39;, &#39;home&#39;).&quot;</span><span class="p">,</span>
+    <span class="n">shell_complete</span><span class="o">=</span><span class="n">complete_aws_profile</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">ak</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">debug</span><span class="p">,</span> <span class="n">aws_profile</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point for the &#39;ak&#39; CLI tool.</span>
+
+<span class="sd">    This group command initializes the logger, configuration, and AWS profile settings,</span>
+<span class="sd">    passing them via the Click context to subcommands.</span>
+
+<span class="sd">    Additionally, when invoked with the `--version` flag, the current version of the tool</span>
+<span class="sd">    will be printed to the console.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ctx (click.Context): The Click context containing the logger and configuration.</span>
+<span class="sd">        debug (bool): Flag to enable debug logging.</span>
+<span class="sd">        aws_profile (str): AWS profile name to be used.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">ensure_object</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">setup_logger</span><span class="p">(</span><span class="s2">&quot;ak&quot;</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="n">debug</span><span class="p">)</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">AKConfig</span><span class="p">()</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;logger&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">logger</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span>
+    <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;aws_profile&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">aws_profile</span>
+
+
+<span class="nd">@ak</span><span class="o">.</span><span class="n">command</span><span class="p">(</span>
+    <span class="s2">&quot;l&quot;</span><span class="p">,</span>
+    <span class="n">short_help</span><span class="o">=</span><span class="s2">&quot;Perform AWS MFA login with a one-time code.&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;Use an AWS MFA one-time code (e.g., from Authenticator or a hardware token) to &quot;</span>
+        <span class="s2">&quot;generate short-lived AWS credentials under the corresponding authenticated profile. &quot;</span>
+        <span class="s2">&quot;Prints an &#39;export&#39; statement to update the calling shell environment.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Example: ak l 123456&quot;</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;mfa_code&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">login_command</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">mfa_code</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform AWS MFA login.</span>
+
+<span class="sd">    Uses the specified (or default) AWS profile to fetch an MFA-based STS session token.</span>
+<span class="sd">    The command prints an export statement (e.g., `export AWS_PROFILE=...`) so that the</span>
+<span class="sd">    calling shell can update its environment accordingly.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ctx (click.Context): The Click context containing the logger and configuration.</span>
+<span class="sd">        mfa_code (str): The MFA code provided by the user.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;logger&quot;</span><span class="p">]</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">]</span>
+    <span class="n">aws_profile_name</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;aws_profile&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">aws_profile_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">aws_profile_name</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">default_aws_profile</span>
+
+    <span class="n">aws_mgr</span> <span class="o">=</span> <span class="n">AWSManager</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">aws_profile_name</span><span class="o">=</span><span class="n">aws_profile_name</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">aws_mgr</span><span class="o">.</span><span class="n">mfa_login</span><span class="p">(</span><span class="n">mfa_code</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="nd">@ak</span><span class="o">.</span><span class="n">command</span><span class="p">(</span>
+    <span class="s2">&quot;c&quot;</span><span class="p">,</span>
+    <span class="n">short_help</span><span class="o">=</span><span class="s2">&quot;Switch to a named kubeconfig.&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;Copies the specified kubeconfig to a temporary location, refreshing tokens if &quot;</span>
+        <span class="s2">&quot;necessary, and prints an &#39;export KUBECONFIG=...&#39; statement. This allows you to &quot;</span>
+        <span class="s2">&quot;quickly switch between different Kubernetes clusters.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Example: ak c dev&quot;</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;kube_name&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">shell_complete</span><span class="o">=</span><span class="n">complete_kube_name</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">switch_kubeconfig</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">kube_name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Switch to a specific Kubernetes configuration.</span>
+
+<span class="sd">    Copies the specified kubeconfig to a temporary file (refreshing tokens if necessary)</span>
+<span class="sd">    and prints an export statement (e.g., `export KUBECONFIG=...`) so the calling shell</span>
+<span class="sd">    can update its environment.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ctx (click.Context): The Click context containing the logger and configuration.</span>
+<span class="sd">        kube_name (str): The name of the kubeconfig to switch to.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;logger&quot;</span><span class="p">]</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">]</span>
+    <span class="n">kube_mgr</span> <span class="o">=</span> <span class="n">KubeManager</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">export_line</span> <span class="o">=</span> <span class="n">kube_mgr</span><span class="o">.</span><span class="n">switch_config</span><span class="p">(</span><span class="n">kube_name</span><span class="p">)</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">export_line</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="nd">@ak</span><span class="o">.</span><span class="n">command</span><span class="p">(</span>
+    <span class="s2">&quot;x&quot;</span><span class="p">,</span>
+    <span class="n">short_help</span><span class="o">=</span><span class="s2">&quot;Switch context within the active kubeconfig.&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;Select a different context in the existing kubeconfig, then update your shell prompt &quot;</span>
+        <span class="s2">&quot;accordingly. Great for switching namespaces or cluster contexts without changing &quot;</span>
+        <span class="s2">&quot;the underlying kubeconfig file.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Example: ak x kube-system&quot;</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;context_name&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">shell_complete</span><span class="o">=</span><span class="n">complete_context_name</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">switch_context</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">context_name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Switch the current Kubernetes context.</span>
+
+<span class="sd">    Updates the active context in the existing temporary kubeconfig and adjusts the</span>
+<span class="sd">    shell prompt (PS1) accordingly.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ctx (click.Context): The Click context containing the logger and configuration.</span>
+<span class="sd">        context_name (str): The Kubernetes context name to switch to.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;logger&quot;</span><span class="p">]</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">]</span>
+    <span class="n">kube_mgr</span> <span class="o">=</span> <span class="n">KubeManager</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">export_line</span> <span class="o">=</span> <span class="n">kube_mgr</span><span class="o">.</span><span class="n">switch_context</span><span class="p">(</span><span class="n">context_name</span><span class="p">)</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">export_line</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="nd">@ak</span><span class="o">.</span><span class="n">command</span><span class="p">(</span>
+    <span class="s2">&quot;r&quot;</span><span class="p">,</span>
+    <span class="n">short_help</span><span class="o">=</span><span class="s2">&quot;Force a Kubernetes API token refresh.&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;Refresh Kubernetes tokens in the current (or specified) kubeconfig file, ensuring &quot;</span>
+        <span class="s2">&quot;your local environment remains authenticated. Useful if the token expires or you &quot;</span>
+        <span class="s2">&quot;just want to proactively refresh.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Example: ak r --kubeconfig dev&quot;</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;--kubeconfig&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;-k&quot;</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Name of kubeconfig file to refresh. Use &#39;all&#39; to refresh all kubeconfigs.&quot;</span><span class="p">,</span>
+    <span class="n">shell_complete</span><span class="o">=</span><span class="n">complete_kube_name</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">force_refresh</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">kubeconfig</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Force a refresh of the Kubernetes API token.</span>
+
+<span class="sd">    This command refreshes all the static Kubernetes API tokens for the current</span>
+<span class="sd">    kubeconfig, or for a specified kubeconfig if provided.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ctx (click.Context): The Click context containing the logger and configuration.</span>
+<span class="sd">        kubeconfig (str): Name of kubeconfig file to refresh. Use &#39;all&#39; to refresh all kubeconfigs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;logger&quot;</span><span class="p">]</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">]</span>
+    <span class="n">kube_mgr</span> <span class="o">=</span> <span class="n">KubeManager</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">kube_mgr</span><span class="o">.</span><span class="n">force_refresh</span><span class="p">(</span><span class="n">kubeconfig</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="get_shell_mode">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.get_shell_mode">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_shell_mode</span><span class="p">(</span><span class="n">shell</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Determine the Click completion mode for the given shell.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        shell (str): The shell name (e.g., &quot;bash&quot;, &quot;zsh&quot;, or &quot;fish&quot;).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The Click completion mode corresponding to the shell.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the shell is unsupported.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">shell</span> <span class="o">==</span> <span class="s2">&quot;bash&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;bash_source&quot;</span>
+    <span class="k">elif</span> <span class="n">shell</span> <span class="o">==</span> <span class="s2">&quot;zsh&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;zsh_source&quot;</span>
+    <span class="k">elif</span> <span class="n">shell</span> <span class="o">==</span> <span class="s2">&quot;fish&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;fish_source&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported shell: </span><span class="si">{</span><span class="n">shell</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_official_completion">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.get_official_completion">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_official_completion</span><span class="p">(</span><span class="n">mode</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieve the official Click-generated shell completion script.</span>
+
+<span class="sd">    Executes a subprocess call with the environment variable `_AK_COMPLETE`</span>
+<span class="sd">    set to the specified mode and returns the resulting completion script.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        mode (str): The shell completion mode.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The shell completion script.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        subprocess.CalledProcessError: If the subprocess call fails.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="s2">&quot;env&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;_AK_COMPLETE=</span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;ak&quot;</span><span class="p">],</span>
+            <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span>
+    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to retrieve completion script: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="generate_bash_zsh_wrapper">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.generate_bash_zsh_wrapper">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_bash_zsh_wrapper</span><span class="p">(</span><span class="n">shell</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a custom wrapper function for Bash or Zsh.</span>
+
+<span class="sd">    The wrapper executes the &#39;ak&#39; binary and evaluates lines that begin with</span>
+<span class="sd">    the `&gt;&gt;&gt;` prefix to update the shell&#39;s environment and prompt.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        shell (str): The shell type (&quot;bash&quot; or &quot;zsh&quot;).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: A string containing the custom wrapper script.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2"># Wrapper function for &#39;ak&#39;: executes the binary and evaluates lines that start with &#39;&gt;&gt;&gt;&#39; prefix</span>
+<span class="s2">function ak() </span><span class="se">{{</span>
+<span class="s2">    # Local variables</span>
+<span class="s2">    local output</span>
+<span class="s2">    local script=&quot;&quot;</span>
+<span class="s2">    </span>
+<span class="s2">    # Run the actual &#39;ak&#39; command, capturing its output</span>
+<span class="s2">    output=$(command ak &quot;$@&quot;) || return 1</span>
+<span class="s2">    </span>
+<span class="s2">    # Read each line of output</span>
+<span class="s2">    while IFS= read -r line; do</span>
+<span class="s2">        # If the line begins with &gt;&gt;&gt;, remove the prefix and accumulate</span>
+<span class="s2">        if [[ $line == &quot;&gt;&gt;&gt;&quot;* ]]; then</span>
+<span class="s2">            line=&quot;$</span><span class="se">{{</span><span class="s2">line#&gt;&gt;&gt;</span><span class="se">}}</span><span class="s2">&quot;</span>
+<span class="s2">            script+=&quot;$line</span>
+<span class="s2">&quot;</span>
+<span class="s2">        else</span>
+<span class="s2">            echo &quot;$line&quot;</span>
+<span class="s2">        fi</span>
+<span class="s2">    done &lt;&lt;&lt; &quot;$output&quot;</span>
+<span class="s2">    </span>
+<span class="s2">    # Evaluate the accumulated lines at once</span>
+<span class="s2">    eval &quot;$script&quot;</span>
+<span class="se">}}</span>
+<span class="s2">&quot;&quot;&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="generate_bash_zsh_prompt_script">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.generate_bash_zsh_prompt_script">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_bash_zsh_prompt_script</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a one-off script for Bash/Zsh that defines and sets a colorful prompt</span>
+<span class="sd">    showing user@host, directory, Git branch, and Kube context.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The script for setting a colorful prompt in Bash/Zsh.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">r</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2"># Define a function to set a new colorful prompt</span>
+<span class="s2">function ak_prompt {</span>
+<span class="s2">    # Username@Host in bold green</span>
+<span class="s2">    local __user_and_host=&quot;\[\033[01;32m\]\u@\h&quot;</span>
+
+<span class="s2">    # Current directory in bold blue</span>
+<span class="s2">    local __cur_location=&quot;\[\033[01;34m\]\w&quot;</span>
+
+<span class="s2">    # Reset color</span>
+<span class="s2">    local __reset_color=&quot;\[\033[00m\]&quot;</span>
+
+<span class="s2">    # Git branch in red</span>
+<span class="s2">    local __git_branch_color=&quot;\[\033[31m\]&quot;</span>
+<span class="s2">    local __git_branch=&#39;`git branch --show-current 2&gt;/dev/null | sed -E &quot;s/(.*)/\1\\\[\\\033[00m\\\],/&quot;`&#39;</span>
+
+<span class="s2">    # Kubeconfig in purple</span>
+<span class="s2">    local __kubeconfig_color=&quot;\[\033[35m\]&quot;</span>
+<span class="s2">    local __kubeconfig=&#39;`{ [ -z &quot;$KUBECONFIG&quot; ] &amp;&amp; echo &#39;-&#39; || basename &quot;$KUBECONFIG&quot; | sed &#39;s/-temp$//&#39;; }`&#39;</span>
+
+<span class="s2">    # Kube context in cyan (if any)</span>
+<span class="s2">    local __kube_context_color=&quot;\[\033[36m\]&quot;</span>
+<span class="s2">    local __kube_context=&#39;`{ c=&quot;$(kubectl config current-context 2&gt;/dev/null)&quot;; [ -z &quot;$c&quot; ] || [ -z &quot;$KUBECONFIG&quot; ] &amp;&amp; echo &#39;-&#39; || echo &quot;$c&quot;; }`&#39;</span>
+
+<span class="s2">    # Prompt tail in purple</span>
+<span class="s2">    local __prompt_tail=&quot;\$&quot;</span>
+
+<span class="s2">    # Compose the final PS1</span>
+<span class="s2">    export PS1=&quot;$</span><span class="si">{__user_and_host}</span><span class="s2"> $</span><span class="si">{__cur_location}</span><span class="s2"> &quot;\</span>
+<span class="s2">&quot;$</span><span class="si">{__reset_color}</span><span class="s2">(&quot;\</span>
+<span class="s2">&quot;$</span><span class="si">{__git_branch_color}</span><span class="s2">$</span><span class="si">{__git_branch}</span><span class="s2">&quot;\</span>
+<span class="s2">&quot;$</span><span class="si">{__kubeconfig_color}</span><span class="s2">$</span><span class="si">{__kubeconfig}</span><span class="s2">&quot;\</span>
+<span class="s2">&quot;$</span><span class="si">{__reset_color}</span><span class="s2">/&quot;\</span>
+<span class="s2">&quot;$</span><span class="si">{__kube_context_color}</span><span class="s2">$</span><span class="si">{__kube_context}</span><span class="s2">&quot;\</span>
+<span class="s2">&quot;$</span><span class="si">{__reset_color}</span><span class="s2">)&quot;\</span>
+<span class="s2">&quot;$</span><span class="si">{__prompt_tail}</span><span class="s2">$</span><span class="si">{__reset_color}</span><span class="s2"> &quot;</span>
+<span class="s2">}</span>
+<span class="s2">ak_prompt</span>
+<span class="s2">&quot;&quot;&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="generate_fish_wrapper">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.generate_fish_wrapper">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_fish_wrapper</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a custom wrapper function for the Fish shell.</span>
+
+<span class="sd">    The wrapper executes the &#39;ak&#39; command and accumulates lines that begin with the</span>
+<span class="sd">    `&gt;&gt;&gt;` prefix into a single string, then evaluates them all at once.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The custom wrapper function script for the Fish shell.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">r</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">function ak --wraps=command ak</span>
+<span class="s2">    set -l output (command ak $argv)</span>
+<span class="s2">    set -l script &quot;&quot;</span>
+<span class="s2">    </span>
+<span class="s2">    for line in $output</span>
+<span class="s2">        if test (string sub -l 3 $line) = &quot;&gt;&gt;&gt;&quot;</span>
+<span class="s2">            set -l stripped_line (string sub --start=3 $line)</span>
+<span class="s2">            if test -z &quot;$script&quot;</span>
+<span class="s2">                set script &quot;$stripped_line&quot;</span>
+<span class="s2">            else</span>
+<span class="s2">                set script &quot;$script</span>
+<span class="s2">$stripped_line&quot;</span>
+<span class="s2">            end</span>
+<span class="s2">        else</span>
+<span class="s2">            echo $line</span>
+<span class="s2">        end</span>
+<span class="s2">    end</span>
+<span class="s2">    </span>
+<span class="s2">    if not test -z &quot;$script&quot;</span>
+<span class="s2">        eval &quot;$script&quot;</span>
+<span class="s2">    end</span>
+<span class="s2">end</span>
+<span class="s2">&quot;&quot;&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="generate_fish_prompt_script">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.generate_fish_prompt_script">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_fish_prompt_script</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a one-off script for Fish that defines a new fish_prompt function</span>
+<span class="sd">    showing user@host, directory, Git branch, and Kube context in color.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The Fish prompt script.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">r</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">function fish_prompt</span>
+<span class="s2">    # 1. user@host in bold green</span>
+<span class="s2">    set_color green --bold</span>
+<span class="s2">    echo -n (whoami)&quot;@&quot;(hostname -s)&quot; &quot;</span>
+
+<span class="s2">    # 2. current directory in bold blue</span>
+<span class="s2">    set_color blue --bold</span>
+<span class="s2">    echo -n (pwd)&quot; &quot;</span>
+
+<span class="s2">    # 3. reset color, then print &quot;(&quot;</span>
+<span class="s2">    set_color normal</span>
+<span class="s2">    echo -n &quot;(&quot;</span>
+
+<span class="s2">    # 4. Git branch in red (with trailing comma if non-empty)</span>
+<span class="s2">    set branch (git branch --show-current 2&gt;/dev/null)</span>
+<span class="s2">    if test -n &quot;$branch&quot;</span>
+<span class="s2">        set_color red</span>
+<span class="s2">        echo -n $branch</span>
+<span class="s2">        set_color normal</span>
+<span class="s2">        echo -n &quot;,&quot;</span>
+<span class="s2">    end</span>
+
+<span class="s2">    # 5. Kubeconfig in purple or &#39;-&#39; if empty</span>
+<span class="s2">    set kubecfg &quot;&quot;</span>
+<span class="s2">    if test -z &quot;$KUBECONFIG&quot;</span>
+<span class="s2">        set kubecfg &quot;-&quot;</span>
+<span class="s2">    else</span>
+<span class="s2">        set tmp (basename &quot;$KUBECONFIG&quot;)</span>
+<span class="s2">        set tmp (string replace -r &#39;-temp$&#39; &#39;&#39; -- $tmp)</span>
+<span class="s2">        set kubecfg $tmp</span>
+<span class="s2">    end</span>
+
+<span class="s2">    set_color magenta</span>
+<span class="s2">    echo -n $kubecfg</span>
+
+<span class="s2">    # 6. Print a slash in default color</span>
+<span class="s2">    set_color normal</span>
+<span class="s2">    echo -n &quot;/&quot;</span>
+
+<span class="s2">    # 7. Kube context in cyan or &#39;-&#39; if empty (or if $KUBECONFIG is empty)</span>
+<span class="s2">    set ctx (kubectl config current-context 2&gt;/dev/null)</span>
+<span class="s2">    if test -z &quot;$ctx&quot; -o -z &quot;$KUBECONFIG&quot;</span>
+<span class="s2">        set ctx &quot;-&quot;</span>
+<span class="s2">    end</span>
+
+<span class="s2">    set_color cyan</span>
+<span class="s2">    echo -n $ctx</span>
+
+<span class="s2">    # 8. close parentheses</span>
+<span class="s2">    set_color normal</span>
+<span class="s2">    echo -n &quot;)&quot;</span>
+
+<span class="s2">    # 9. final prompt symbol in purple</span>
+<span class="s2">    set_color magenta</span>
+<span class="s2">    echo -n &quot;$ &quot;</span>
+
+<span class="s2">    # 10. reset color</span>
+<span class="s2">    set_color normal</span>
+<span class="s2">end</span>
+<span class="s2">&quot;&quot;&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="generate_custom_wrapper">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.generate_custom_wrapper">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_custom_wrapper</span><span class="p">(</span><span class="n">shell</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a shell-specific custom function wrapper.</span>
+
+<span class="sd">    Dispatches the wrapper generation to the appropriate function based on the shell.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        shell (str): The shell name (&quot;bash&quot;, &quot;zsh&quot;, or &quot;fish&quot;).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: A string containing the custom wrapper script for the specified shell.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        SystemExit: Prints an error and exits if the shell is unsupported.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">shell</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;bash&quot;</span><span class="p">,</span> <span class="s2">&quot;zsh&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">generate_bash_zsh_wrapper</span><span class="p">(</span><span class="n">shell</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">shell</span> <span class="o">==</span> <span class="s2">&quot;fish&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">generate_fish_wrapper</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported shell: </span><span class="si">{</span><span class="n">shell</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="generate_prompt_script">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.generate_prompt_script">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_prompt_script</span><span class="p">(</span><span class="n">shell</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a one-off script that sets a colorized prompt displaying user@host,</span>
+<span class="sd">    current directory, Git branch, and Kube context for the specified shell.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        shell (str): The shell name (&quot;bash&quot;, &quot;zsh&quot;, or &quot;fish&quot;).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The prompt script for the specified shell.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">shell</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;bash&quot;</span><span class="p">,</span> <span class="s2">&quot;zsh&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">generate_bash_zsh_prompt_script</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">shell</span> <span class="o">==</span> <span class="s2">&quot;fish&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">generate_fish_prompt_script</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span></div>
+
+
+
+<span class="nd">@ak</span><span class="o">.</span><span class="n">command</span><span class="p">(</span>
+    <span class="s2">&quot;completion&quot;</span><span class="p">,</span>
+    <span class="n">short_help</span><span class="o">=</span><span class="s2">&quot;Generate a shell completion script for bash, zsh, or fish.&quot;</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;Generates an official Click completion script for your chosen shell (bash, zsh, or fish) &quot;</span>
+        <span class="s2">&quot;and a custom wrapper that updates environment variables. You can source this script for &quot;</span>
+        <span class="s2">&quot;interactive tab-completion.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Example:</span><span class="se">\n</span><span class="s2">  eval </span><span class="se">\&quot;</span><span class="s2">$(ak completion bash)</span><span class="se">\&quot;</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;shell&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">click</span><span class="o">.</span><span class="n">Choice</span><span class="p">([</span><span class="s2">&quot;bash&quot;</span><span class="p">,</span> <span class="s2">&quot;zsh&quot;</span><span class="p">,</span> <span class="s2">&quot;fish&quot;</span><span class="p">]),</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;bash&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">completion_cmd</span><span class="p">(</span><span class="n">shell</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a shell completion script and custom function wrapper.</span>
+
+<span class="sd">    This command prints the official Click-generated shell completion script for the</span>
+<span class="sd">    chosen shell, then appends a shell-specific wrapper function that adjusts</span>
+<span class="sd">    environment variables and prompt.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        shell (str): The shell type (&quot;bash&quot;, &quot;zsh&quot;, or &quot;fish&quot;).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="n">get_shell_mode</span><span class="p">(</span><span class="n">shell</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> <span class="n">err</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">official_script</span> <span class="o">=</span> <span class="n">get_official_completion</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+    <span class="n">custom_wrapper</span> <span class="o">=</span> <span class="n">generate_custom_wrapper</span><span class="p">(</span><span class="n">shell</span><span class="p">)</span>
+    <span class="n">prompt_script</span> <span class="o">=</span> <span class="n">generate_prompt_script</span><span class="p">(</span><span class="n">shell</span><span class="p">)</span>
+
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">official_script</span><span class="p">)</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">custom_wrapper</span><span class="p">)</span>
+    <span class="n">click</span><span class="o">.</span><span class="n">echo</span><span class="p">(</span><span class="n">prompt_script</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../api.html#ak_tool.cli.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Entry point for the &#39;ak&#39; CLI tool.</span>
+
+<span class="sd">    Invokes the Click command group.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ak</span><span class="p">()</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">ak</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Table of Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Aharon Haravon.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

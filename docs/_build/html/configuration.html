@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Configuration &#8212; ak 0.1.5 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=59fadc99"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Commands" href="commands.html" />
+    <link rel="prev" title="Usage Guide" href="usage.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="configuration">
+<h1>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">ak</span></code> tool requires a configuration file at:</p>
+<p><code class="docutils literal notranslate"><span class="pre">~/.config/ak/config.ini</span></code></p>
+<p>If this file does <strong>not</strong> exist, <code class="docutils literal notranslate"><span class="pre">ak</span></code> automatically creates a minimal default
+configuration upon first run (see <span class="xref std std-ref">minimal-default-config</span> below). The config
+file defines how <code class="docutils literal notranslate"><span class="pre">ak</span></code>:</p>
+<ul class="simple">
+<li><p>Retrieves and manages <strong>AWS</strong> credentials (including MFA).</p></li>
+<li><p>Handles <strong>Kubernetes</strong> kubeconfigs and tokens.</p></li>
+</ul>
+<p>This document describes each configuration section and the relevant keys you can set.</p>
+</section>
+<section id="global-structure">
+<h2>Global Structure<a class="headerlink" href="#global-structure" title="Link to this heading">¶</a></h2>
+<p>A typical <code class="docutils literal notranslate"><span class="pre">ak</span></code> configuration file has at least two main sections:</p>
+<ol class="arabic simple">
+<li><p>A global <strong>[aws]</strong> section for AWS-wide settings (e.g., default credentials file,
+token duration, default profile).</p></li>
+<li><p>One or more <strong>[aws.&lt;profile&gt;]</strong> sections describing specific AWS sub-profiles
+(e.g., <cite>[aws.company]</cite>, <cite>[aws.home]</cite>, <cite>[aws.company-dev-root]</cite>, etc.).</p></li>
+<li><p>A global <strong>[kube]</strong> section for Kubernetes defaults (e.g., where your kubeconfig
+files live, how long tokens last, etc.).</p></li>
+</ol>
+<p>For example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[aws]</span>
+<span class="na">credentials_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/home/user/.aws/credentials</span>
+<span class="na">token_validity_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">43200</span>
+<span class="na">default_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">company</span>
+
+<span class="k">[aws.company]</span>
+<span class="na">original_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">company-root</span>
+<span class="na">authenticated_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">company-root-mfa</span>
+<span class="na">mfa_serial</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">arn:aws:iam::3453453454345:mfa/yubikey4</span>
+
+<span class="k">[aws.home]</span>
+<span class="na">original_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">home-systems</span>
+<span class="na">authenticated_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">home-systems-mfa</span>
+<span class="na">mfa_serial</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">arn:aws:iam::262626262626:mfa/yubikey4</span>
+
+<span class="k">[kube]</span>
+<span class="na">configs_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/home/user/.kubeconfigs</span>
+<span class="na">temp_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/home/user/.kubeconfigs_temp</span>
+<span class="na">token_validity_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">900</span>
+<span class="na">default_config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">dev</span>
+</pre></div>
+</div>
+<p>You can add more or fewer sections to suit your environment.</p>
+</section>
+<section id="aws-section">
+<h2>[aws] Section<a class="headerlink" href="#aws-section" title="Link to this heading">¶</a></h2>
+<p>This <strong>global</strong> section controls overall AWS-related defaults. It must be named exactly
+<code class="docutils literal notranslate"><span class="pre">[aws]</span></code>. Keys include:</p>
+<ul>
+<li><p><strong>credentials_file</strong> (string):</p>
+<p>Path to your AWS credentials file. Typically this is
+<code class="docutils literal notranslate"><span class="pre">~/.aws/credentials</span></code> but you can set it to any file. When you run
+<code class="docutils literal notranslate"><span class="pre">ak</span> <span class="pre">l</span> <span class="pre">&lt;mfa_code&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">ak</span></code> updates credentials in this file.</p>
+</li>
+<li><p><strong>token_validity_seconds</strong> (integer, default = 43200):</p>
+<p>How long temporary AWS credentials remain valid, in <strong>seconds</strong>. By default,
+43200 seconds = 12 hours. If you do not specify a duration in a sub-profile,
+this global value is used.</p>
+</li>
+<li><p><strong>default_profile</strong> (string):</p>
+<p>Name of the AWS sub-profile to use if the user does not explicitly specify
+<code class="docutils literal notranslate"><span class="pre">--aws-profile</span></code>. For example, if you set <cite>default_profile = home</cite>, then
+running commands without <code class="docutils literal notranslate"><span class="pre">--aws-profile</span></code> will fall back to the sub-profile
+<cite>[aws.home]</cite>.</p>
+</li>
+</ul>
+<p>Example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[aws]</span>
+<span class="na">credentials_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/home/user/.aws/credentials</span>
+<span class="na">token_validity_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">43200</span>
+<span class="na">default_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">company</span>
+</pre></div>
+</div>
+</section>
+<section id="aws-profile-sub-profiles">
+<h2>[aws.&lt;profile&gt;] Sub-Profiles<a class="headerlink" href="#aws-profile-sub-profiles" title="Link to this heading">¶</a></h2>
+<p>Each sub-profile is an additional section named <cite>[aws.&lt;PROFILE_NAME&gt;]</cite>. These define how
+<code class="docutils literal notranslate"><span class="pre">ak</span></code> handles MFA, short-lived AWS credentials, and override token durations (if desired).</p>
+<p>Within each sub-profile section, you may configure:</p>
+<ul>
+<li><p><strong>original_profile</strong> (string):</p>
+<p>The name of your base AWS CLI profile used to <strong>authenticate</strong> via MFA.
+This profile <strong>must</strong> exist in your AWS credentials file. For example, if
+you have:</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">[company-root]</span>
+<span class="pre">aws_access_key_id</span> <span class="pre">=</span> <span class="pre">...</span>
+<span class="pre">aws_secret_access_key</span> <span class="pre">=</span> <span class="pre">...</span>
+<span class="pre">`</span></code></p>
+<p>then <cite>original_profile</cite> would be <cite>company-root</cite>.</p>
+</li>
+<li><p><strong>authenticated_profile</strong> (string):</p>
+<p>The name of the AWS CLI profile where <strong>short-lived</strong> credentials (STS tokens)
+are written after MFA login. Typically something like <cite>company-root-mfa</cite>.
+<cite>ak</cite> will automatically write updated credentials under this profile in your
+credentials file.</p>
+</li>
+<li><p><strong>mfa_serial</strong> (string):</p>
+<p>The ARN of the MFA device associated with your AWS account. For example:
+<code class="docutils literal notranslate"><span class="pre">arn:aws:iam::123456789012:mfa/your.username</span></code></p>
+</li>
+<li><p><strong>token_validity_seconds</strong> (integer, optional):</p>
+<p>If present, overrides the global <cite>[aws].token_validity_seconds</cite> for this sub-profile only.
+This allows certain profiles to have shorter or longer MFA validity periods. If omitted,
+the global default is used.</p>
+</li>
+</ul>
+<p>Example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[aws.company]</span>
+<span class="na">original_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">company-root</span>
+<span class="na">authenticated_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">company-root-mfa</span>
+<span class="na">mfa_serial</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">arn:aws:iam::3453453454345:mfa/yubikey4</span>
+
+<span class="k">[aws.home]</span>
+<span class="na">original_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">home-systems</span>
+<span class="na">authenticated_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">home-systems-mfa</span>
+<span class="na">mfa_serial</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">arn:aws:iam::262626262626:mfa/yubikey4</span>
+
+<span class="k">[aws.company-dev-root]</span>
+<span class="na">original_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">company-dev-root</span>
+<span class="na">authenticated_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">company-dev-root-mfa</span>
+<span class="na">mfa_serial</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">arn:aws:iam::111111111111:mfa/dev-yubikey4</span>
+<span class="na">token_validity_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">7200</span><span class="w">  </span><span class="c1">; 2 hours just for dev</span>
+</pre></div>
+</div>
+<p>When you run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ak<span class="w"> </span>l<span class="w"> </span><span class="m">123456</span><span class="w"> </span>--aws-profile<span class="w"> </span>company
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">ak</span></code>:</p>
+<ol class="arabic simple">
+<li><p>Looks up <cite>[aws.company]</cite></p></li>
+<li><p>Uses <cite>company-root</cite> as <cite>original_profile</cite></p></li>
+<li><p>Writes short-lived credentials to <cite>company-root-mfa</cite></p></li>
+<li><p>Applies the sub-profile’s <cite>mfa_serial</cite></p></li>
+<li><p>Uses either the sub-profile’s <cite>token_validity_seconds</cite>, or if not set, the global <cite>[aws]</cite> value.</p></li>
+</ol>
+</section>
+<section id="kube-section">
+<h2>[kube] Section<a class="headerlink" href="#kube-section" title="Link to this heading">¶</a></h2>
+<p>This section handles Kubernetes-specific settings. It <strong>must</strong> be named <cite>[kube]</cite>.
+Keys include:</p>
+<ul>
+<li><p><strong>configs_dir</strong> (string, default = <code class="docutils literal notranslate"><span class="pre">~/.kubeconfigs</span></code>):</p>
+<p>Directory where you store your named kubeconfig files (e.g., <cite>dev</cite>, <cite>prod</cite>, <cite>staging.yaml</cite>, etc.).
+You switch among these with <code class="docutils literal notranslate"><span class="pre">ak</span> <span class="pre">c</span> <span class="pre">&lt;kube_name&gt;</span></code>.</p>
+</li>
+<li><p><strong>temp_dir</strong> (string, default = <code class="docutils literal notranslate"><span class="pre">~/.kubeconfigs_temp</span></code>):</p>
+<p>Directory where <code class="docutils literal notranslate"><span class="pre">ak</span></code> writes out <strong>temporary</strong> kubeconfig files, containing
+short-lived tokens. This prevents you from overwriting your original kubeconfigs.</p>
+</li>
+<li><p><strong>token_validity_seconds</strong> (integer, default = 900):</p>
+<p>Kubernetes token validity in seconds. By default, 900 seconds = 15 minutes.
+Once the token expires, <code class="docutils literal notranslate"><span class="pre">ak</span></code> will automatically re-generate a new token
+upon the next command (or you can run <code class="docutils literal notranslate"><span class="pre">ak</span> <span class="pre">r</span></code> to force a refresh).</p>
+</li>
+<li><p><strong>default_config</strong> (string, optional):</p>
+<p>The default kubeconfig name if you do not specify one in commands like
+<code class="docutils literal notranslate"><span class="pre">ak</span> <span class="pre">c</span></code> or in your environment variables. If omitted, you must always
+provide an explicit kubeconfig name.</p>
+</li>
+</ul>
+<p>Example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[kube]</span>
+<span class="na">configs_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/home/user/.kubeconfigs</span>
+<span class="na">temp_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/home/user/.kubeconfigs_temp</span>
+<span class="na">token_validity_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">900</span>
+<span class="na">default_config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">dev</span>
+</pre></div>
+</div>
+<p>In this example:
+- <code class="docutils literal notranslate"><span class="pre">ak</span> <span class="pre">c</span> <span class="pre">dev</span></code> copies <cite>/home/user/.kubeconfigs/dev</cite> to a file in <cite>/home/user/.kubeconfigs_temp</cite>.
+- The new file has AWS-based entries replaced with static tokens that remain valid for 15 minutes.
+- If you omit <cite>dev</cite>, it defaults to whatever is under <cite>default_config</cite>.</p>
+</section>
+<section id="minimal-default-config">
+<h2>Minimal Default Config<a class="headerlink" href="#minimal-default-config" title="Link to this heading">¶</a></h2>
+<p id="id1">If <code class="docutils literal notranslate"><span class="pre">~/.config/ak/config.ini</span></code> is <strong>missing</strong>, <code class="docutils literal notranslate"><span class="pre">ak</span></code> automatically creates a minimal
+config file with the following sections:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[aws]</span>
+<span class="na">credentials_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/home/&lt;USER&gt;/.aws/credentials</span>
+<span class="na">token_validity_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">43200</span>
+<span class="na">default_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">home</span>
+
+<span class="k">[aws.home]</span>
+<span class="na">original_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">home</span>
+<span class="na">authenticated_profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">home-authenticated</span>
+<span class="na">mfa_serial</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">arn:aws:iam::222222222:mfa/token</span>
+
+<span class="k">[kube]</span>
+<span class="na">configs_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/home/&lt;USER&gt;/.kubeconfigs</span>
+<span class="na">temp_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/home/&lt;USER&gt;/.kubeconfigs_temp</span>
+<span class="na">token_validity_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">900</span>
+<span class="na">default_config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">home</span>
+</pre></div>
+</div>
+<p>Adjust these defaults to fit your environment.</p>
+</section>
+<section id="tips-best-practices">
+<h2>Tips &amp; Best Practices<a class="headerlink" href="#tips-best-practices" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p><strong>Keep AWS Credentials Secure</strong>
+Your <cite>credentials_file</cite> path should be readable only by your user.
+Avoid committing it to version control.</p></li>
+<li><p><strong>Use Distinct Sub-Profiles</strong>
+For each AWS environment (dev, prod, personal, etc.), create a separate
+<cite>[aws.&lt;profile&gt;]</cite> so you can run <code class="docutils literal notranslate"><span class="pre">ak</span> <span class="pre">l</span></code> with the correct <cite>–aws-profile</cite>.</p></li>
+<li><p><strong>Shorter Durations in Sensitive Environments</strong>
+If you want more frequent re-authentication, reduce <cite>token_validity_seconds</cite> in
+a sub-profile. E.g., <cite>[aws.company-prod-root] token_validity_seconds=3600</cite>.</p></li>
+<li><p><strong>Automate</strong>
+Place commands like <cite>eval “$(ak completion bash)”</cite> in your <cite>.bashrc</cite> or <cite>.zshrc</cite>.
+You can also define an alias if you find yourself switching contexts frequently.</p></li>
+<li><p><strong>Check Context</strong>
+After switching kubeconfigs, you can run <cite>kubectl config current-context</cite>
+(or <cite>ak x &lt;context&gt;</cite>) to confirm you’re in the correct environment.</p></li>
+</ol>
+</section>
+<section id="conclusion">
+<h2>Conclusion<a class="headerlink" href="#conclusion" title="Link to this heading">¶</a></h2>
+<p>By customizing <cite>[aws]</cite>, <cite>[aws.&lt;profile&gt;]</cite>, and <cite>[kube]</cite> sections, you can tailor
+ak to your specific AWS+Kubernetes environments. For further usage instructions,
+see <span class="xref std std-ref">usage</span>.</p>
+<p>For an in-depth look at the internal config loading logic, refer to the
+<a class="reference internal" href="api.html"><span class="doc">API Reference</span></a> (specifically the <cite>ak_tool.config</cite> module).</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ak</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Table of Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#global-structure">Global Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#aws-section">[aws] Section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#aws-profile-sub-profiles">[aws.&lt;profile&gt;] Sub-Profiles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kube-section">[kube] Section</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#minimal-default-config">Minimal Default Config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tips-best-practices">Tips &amp; Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="commands.html">Commands</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="usage.html" title="previous chapter">Usage Guide</a></li>
+      <li>Next: <a href="commands.html" title="next chapter">Commands</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Aharon Haravon.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/configuration.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
