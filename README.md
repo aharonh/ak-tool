@@ -539,9 +539,9 @@ This command runs `pytest --cov` to generate a detailed coverage report.
 
 ## For further reference
 
-- [ak api documentation](https://aharonh.github.io/ak-tool/)
-- [aws cli config documentation](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-files.html)
-- [kubeconfig v1 documentation](https://kubernetes.io/docs/reference/config-api/kubeconfig.v1/)
+- [Official documentation](https://aharonh.github.io/ak-tool/)
+- [AWS cli config documentation](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-files.html)
+- [Kubeconfig v1 documentation](https://kubernetes.io/docs/reference/config-api/kubeconfig.v1/)
 
 ## Final Notes
 
